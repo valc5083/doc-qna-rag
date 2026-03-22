@@ -58,7 +58,7 @@ public class AuthController : ControllerBase
         }
     }
 
-    [HttpDelete("logout")]
+    [HttpPost("logout")]
     public async Task<IActionResult> Logout([FromBody] string refreshToken)
     {
         await _authService.LogoutAsync(refreshToken);
