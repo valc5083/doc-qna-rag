@@ -1,0 +1,6 @@
+@DocQnA.API_HostAddress = http://localhost:5037
+
+GET {{DocQnA.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

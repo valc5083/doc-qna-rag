@@ -1,0 +1,31 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.log
+
+## Secrets — NEVER commit these
+appsettings.Development.json
+appsettings.*.json
+!appsettings.json
+
+## EF Core
+*.db
+*.db-shm
+*.db-wal
+
+## Node / React (for later)
+node_modules/
+dist/
+.env
+.env.local
+
+## Docker volumes
+postgres_data/
+qdrant_data/
+
+## OS
+.DS_Store
+Thumbs.db
