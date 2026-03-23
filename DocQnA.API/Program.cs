@@ -24,6 +24,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<AuthService>();
 
+// Register DocumentService
+builder.Services.AddScoped<DocumentService>();
+
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:SecretKey"]!;
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

@@ -8,6 +8,7 @@ services:
       POSTGRES_USER: docqna_user
       POSTGRES_PASSWORD: docqna_pass123
       POSTGRES_DB: docqna_db
+      PGTZ: Asia/Kolkata
     ports:
       - "5432:5432"
     volumes:
