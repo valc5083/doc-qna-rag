@@ -27,6 +27,11 @@ builder.Services.AddScoped<AuthService>();
 // Register DocumentService
 builder.Services.AddScoped<DocumentService>();
 
+// Pdf extraction, text chunking, and ingestion services
+builder.Services.AddScoped<PdfExtractorService>();
+builder.Services.AddScoped<TextChunkerService>();
+builder.Services.AddScoped<IngestionService>();
+
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:SecretKey"]!;
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

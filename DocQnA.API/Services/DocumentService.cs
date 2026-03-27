@@ -9,14 +9,16 @@ namespace DocQnA.API.Services
     {
         private readonly AppDbContext _db;
         private readonly ILogger<DocumentService> _logger;
+        private readonly IngestionService _ingestionService;
 
         //Max file size in bytes (e.g., 50 MB)
         private const long MaxFileSizeBytes = 50 * 1024 * 1024;
 
-        public DocumentService(AppDbContext db, ILogger<DocumentService> logger)
+        public DocumentService(AppDbContext db, ILogger<DocumentService> logger, IngestionService ingestionService)
         {
             _db = db;
             _logger = logger;
+            _ingestionService = ingestionService;
         }
 
         public async Task<DocumentUploadResponse> UploadAsync(IFormFile file, Guid userId)
@@ -56,6 +58,25 @@ namespace DocQnA.API.Services
 
             _logger.LogInformation("Document {DocumentId} uploaded by user {UserId}. Original file name: {FileName}, Size: {FileSize} bytes", 
                 document.Id, userId, file.FileName, file.Length);
+
+            // ── Trigger ingestion pipeline in background ──────────
+            // Copy stream to memory so it survives the request
+            var memoryStream = new MemoryStream();
+            await file.CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
+
+            var docId = document.Id;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _ingestionService.IngestAsync(docId, memoryStream);
+                }
+                finally
+                {
+                    await memoryStream.DisposeAsync();
+                }
+            });
 
             return new DocumentUploadResponse
             {
