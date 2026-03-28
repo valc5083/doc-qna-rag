@@ -127,7 +127,11 @@ const DocumentList = ({ documents, onDelete, onRefresh }: Props) => {
                   variant="contained"
                   size="small"
                   startIcon={<Chat />}
-                  onClick={() => navigate(`/chat/${doc.id}`)}
+                  onClick={() =>
+                    navigate(`/chat/${doc.id}`, {
+                      state: { mode: "fresh" },
+                    })
+                  }
                   sx={{
                     borderRadius: 8,
                     textTransform: "none",

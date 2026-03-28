@@ -5,6 +5,7 @@ import DashboardPage from "./pages/DashboardPage";
 import ChatPage from "./pages/ChatPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
+import HistoryPage from "./pages/HistoryPage";
 
 function App() {
   return (
@@ -31,6 +32,18 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/history"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                <HistoryPage />
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>

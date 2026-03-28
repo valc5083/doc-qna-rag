@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box } from "@mui/material";
+import { Box, Button } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { authApi } from "../api/authApi";
@@ -15,7 +15,9 @@ import {
   NavLogoutButton,
   MainContent,
   SectionTitle,
+  NavHistoryButton,
 } from "../components/styles/DocumentStyles";
+import { History } from "@mui/icons-material";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -80,6 +82,13 @@ const DashboardPage = () => {
         <NavTitle>🤖 DocQnA</NavTitle>
         <Box display="flex" alignItems="center" gap={2}>
           <NavEmail>{email}</NavEmail>
+          <NavHistoryButton
+            variant="outlined"
+            startIcon={<History />}
+            onClick={() => navigate("/history")}
+          >
+            History
+          </NavHistoryButton>
           <NavLogoutButton variant="outlined" onClick={handleLogout}>
             Logout
           </NavLogoutButton>

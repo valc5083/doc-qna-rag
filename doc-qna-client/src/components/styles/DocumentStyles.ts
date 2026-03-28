@@ -42,6 +42,18 @@ export const NavLogoutButton = styled(Button)({
   },
 });
 
+export const NavHistoryButton = styled(Button)({
+  color: "#ffffff",
+  borderColor: "rgba(255,255,255,0.5)",
+  borderRadius: 8,
+  textTransform: "none",
+  fontWeight: 600,
+  "&:hover": {
+    borderColor: "#ffffff",
+    background: "rgba(255,255,255,0.1)",
+  },
+});
+
 // ── Main Content Area ─────────────────────────────────────────
 export const MainContent = styled(Box)({
   flex: 1,

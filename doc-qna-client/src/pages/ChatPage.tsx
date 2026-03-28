@@ -1,11 +1,26 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Box, CircularProgress, Typography, Chip } from "@mui/material";
-import { Send, ArrowBack } from "@mui/icons-material";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import {
+  Box,
+  CircularProgress,
+  Typography,
+  Chip,
+  Drawer,
+  List,
+  ListItem,
+  Divider,
+  IconButton,
+} from "@mui/material";
+import { Send, ArrowBack, History } from "@mui/icons-material";
 import ReactMarkdown from "react-markdown";
 import { qnaApi } from "../api/qnaApi";
 import { documentApi } from "../api/documentApi";
-import type { ChatBubble, DocumentListResponse, SourceChunk } from "../types";
+import type {
+  ChatBubble,
+  DocumentListResponse,
+  SourceChunk,
+  ChatHistoryItem,
+} from "../types";
 import SourceViewer from "../components/SourceViewer";
 import {
   ChatLayout,
@@ -16,8 +31,6 @@ import {
   MessagesArea,
   UserBubble,
   AssistantBubble,
-  ThinkingBubble,
-  ThinkingText,
   InputArea,
   QuestionInput,
   SendButton,
@@ -30,6 +43,9 @@ import {
 const ChatPage = () => {
   const { documentId } = useParams<{ documentId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const mode = location.state?.mode || "fresh";
+  const selectedHistoryId = location.state?.selectedHistoryId;
 
   const [document, setDocument] = useState<DocumentListResponse | null>(null);
   const [messages, setMessages] = useState<ChatBubble[]>([]);
@@ -39,6 +55,8 @@ const ChatPage = () => {
   const [streamingId, setStreamingId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -49,18 +67,91 @@ const ChatPage = () => {
   }, [messages]);
 
   useEffect(() => {
+    setMessages([]);
+    setChatHistory([]);
+  }, [documentId]);
+
+  useEffect(() => {
+    if (location.state?.scrollToBottom) {
+      setTimeout(() => scrollToBottom(), 300);
+    }
+  }, [location.state]);
+
+  useEffect(() => {
     if (!documentId) return;
+
+    // Load document
     documentApi.getAll().then((docs) => {
       const doc = docs.find((d) => d.id === documentId);
       if (doc) setDocument(doc);
     });
-  }, [documentId]);
+
+    // 🧠 CONTROL BEHAVIOR HERE
+    if (mode === "fresh") {
+      setMessages([]); // ✅ clear everything
+      return;
+    }
+
+    if (mode === "history") {
+      qnaApi
+        .getHistory(20)
+        .then((history) => {
+          const docHistory = history
+            .filter((item) => item.documentId === documentId)
+            .reverse(); // oldest first
+
+          const bubbles: ChatBubble[] = [];
+
+          for (const item of docHistory) {
+            bubbles.push({
+              id: `history-user-${item.id}`,
+              type: "user",
+              content: item.question,
+              createdAt: item.createdAt,
+            });
+
+            bubbles.push({
+              id: `history-assistant-${item.id}`,
+              type: "assistant",
+              content: item.answer,
+              sources: Array.isArray(item.sources) ? item.sources : [],
+              createdAt: item.createdAt,
+            });
+
+            // ⭐ stop at selected item
+            if (selectedHistoryId && item.id === selectedHistoryId) {
+              break;
+            }
+          }
+
+          setMessages(bubbles);
+          setChatHistory(docHistory);
+        })
+        .catch(() => {});
+    }
+  }, [documentId, mode]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       eventSourceRef.current?.close();
     };
+  }, []);
+
+  useEffect(() => {
+    qnaApi
+      .getHistory(10)
+      .then((h) => {
+        const docHistory = h.filter((item) => item.documentId === documentId);
+        setChatHistory(docHistory);
+      })
+      .catch(() => {});
+  }, [documentId]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => scrollToBottom(), 100);
+    }
   }, []);
 
   const handleAsk = useCallback(async () => {
@@ -134,6 +225,12 @@ const ChatPage = () => {
         setStatusText("");
         setStreamingId(null);
         eventSourceRef.current = null;
+        qnaApi
+          .getHistory(10)
+          .then((h) => {
+            setChatHistory(h.filter((item) => item.documentId === documentId));
+          })
+          .catch(() => {});
       },
 
       // onError
@@ -149,6 +246,37 @@ const ChatPage = () => {
       },
     );
   }, [question, documentId, loading]);
+
+  const handleHistoryClick = (selectedItem: ChatHistoryItem) => {
+    if (!documentId) return;
+
+    const sorted = [...chatHistory].reverse(); // oldest first
+    const bubbles: ChatBubble[] = [];
+
+    for (const item of sorted) {
+      bubbles.push({
+        id: `history-user-${item.id}`,
+        type: "user",
+        content: item.question,
+        createdAt: item.createdAt,
+      });
+
+      bubbles.push({
+        id: `history-assistant-${item.id}`,
+        type: "assistant",
+        content: item.answer,
+        sources: Array.isArray(item.sources) ? item.sources : [],
+        createdAt: item.createdAt,
+      });
+
+      if (item.id === selectedItem.id) break; // ✅ correct stop
+    }
+
+    setMessages(bubbles);
+    setHistoryOpen(false);
+
+    setTimeout(() => scrollToBottom(), 100);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -179,6 +307,14 @@ const ChatPage = () => {
               }}
             />
           )}
+
+          <IconButton
+            onClick={() => setHistoryOpen(true)}
+            sx={{ color: "#ffffff" }}
+            title="View history"
+          >
+            <History />
+          </IconButton>
           <BackButton
             variant="outlined"
             startIcon={<ArrowBack />}
@@ -288,6 +424,73 @@ const ChatPage = () => {
           {loading ? <CircularProgress size={20} color="inherit" /> : <Send />}
         </SendButton>
       </InputArea>
+
+      {/* History Drawer */}
+      <Drawer
+        anchor="right"
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        PaperProps={{
+          sx: { width: 360, p: 2 },
+        }}
+      >
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          mb={2}
+        >
+          <Typography fontWeight={700} fontSize="1.1rem" color="#1F4E79">
+            📜 Recent Questions
+          </Typography>
+          <IconButton onClick={() => setHistoryOpen(false)}>✕</IconButton>
+        </Box>
+        <Divider sx={{ mb: 2 }} />
+
+        {chatHistory.length === 0 ? (
+          <Typography color="text.secondary" fontSize="0.875rem">
+            No history for this document yet.
+          </Typography>
+        ) : (
+          <List disablePadding>
+            {chatHistory.map((item, i) => (
+              <ListItem
+                key={item.id}
+                disablePadding
+                sx={{
+                  mb: 1,
+                  background: "#F5F8FB",
+                  borderRadius: 2,
+                  p: 1.5,
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  cursor: "pointer",
+                  "&:hover": { background: "#EBF3FB" },
+                }}
+                onClick={() => handleHistoryClick(item)}
+              >
+                <Typography
+                  fontSize="0.85rem"
+                  fontWeight={600}
+                  color="#1F4E79"
+                  mb={0.5}
+                >
+                  🙋{" "}
+                  {item.question.length > 60
+                    ? item.question.substring(0, 60) + "..."
+                    : item.question}
+                </Typography>
+                <Typography fontSize="0.75rem" color="#888888">
+                  {item.answer.substring(0, 80)}...
+                </Typography>
+                <Typography fontSize="0.7rem" color="#AAAAAA" mt={0.5}>
+                  {new Date(item.createdAt).toLocaleDateString("en-IN")}
+                </Typography>
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </Drawer>
     </ChatLayout>
   );
 };
