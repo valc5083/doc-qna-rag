@@ -81,49 +81,4 @@ public class DocumentController : ControllerBase
 
         return Ok(new { id = document.Id, status = document.Status });
     }
-
-    /// <summary>Test PDF extraction only — remove after Next Integration</summary>
-    [HttpPost("test-extraction")]
-    [AllowAnonymous]
-    public async Task<IActionResult> TestExtraction(
-        IFormFile file,
-        [FromServices] PdfExtractorService extractor,
-        [FromServices] TextChunkerService chunker,
-        [FromServices] ILogger<DocumentController> logger)
-    {
-        if (file == null || Path.GetExtension(file.FileName) != ".pdf")
-            return BadRequest(new { message = "Please upload a PDF file." });
-
-        using var stream = file.OpenReadStream();
-
-        // Extract text
-        var text = extractor.ExtractText(stream);
-        logger.LogInformation("Text extraction completed. Length: {TextLength}", text.Length);
-
-        // Chunk it
-        stream.Position = 0;
-        var chunks = chunker.ChunkText(text);
-        logger.LogInformation("Text chunking completed. Chunk count: {ChunkCount}", chunks.Count);
-
-        // Build response with materialized chunks
-        var chunkDtos = chunks.Select(c => new
-        {
-            index = c.Index,
-            tokenEstimate = c.TokenEstimate,
-            preview = c.Text.Length > 150 ? c.Text[..150] + "..." : c.Text
-        }).ToList();
-
-        logger.LogInformation("Response serialization started");
-
-        var response = new
-        {
-            totalCharacters = text.Length,
-            estimatedTokens = text.Length / 4,
-            chunkCount = chunks.Count,
-            chunks = chunkDtos
-        };
-
-        logger.LogInformation("Response object created, returning result");
-        return Ok(response);
-    }
 }

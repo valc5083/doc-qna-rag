@@ -2,68 +2,95 @@
 
 > Ask natural language questions over your uploaded PDF documents using AI — powered by Retrieval-Augmented Generation (RAG).
 
-![Status](https://img.shields.io/badge/Status-In%20Development-blue)
+![Status](https://img.shields.io/badge/Status-Week%202%20In%20Progress-orange)
 ![.NET](https://img.shields.io/badge/.NET-8.0-purple)
 ![React](https://img.shields.io/badge/React-18-61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)
+![MUI](https://img.shields.io/badge/MUI-5.x-007FFF)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ---
 
 ## ✨ Features
 
-- 📄 **PDF Upload** — Drag and drop PDF documents for processing
-- 🔍 **AI-Powered Q&A** — Ask questions in natural language, get answers grounded in your documents
-- 🧠 **RAG Pipeline** — Semantic chunking, vector embeddings, and similarity search
-- 💬 **Streaming Responses** — Real-time token-by-token answer rendering
-- 📚 **Source Attribution** — See exactly which part of the document answered your question
-- 🗂️ **Collection Management** — Organise multiple documents into named collections
-- 🔐 **JWT Authentication** — Secure login/register with refresh token rotation
-- 🌗 **Clean UI** — Built with React + Material UI styled components
+### ✅ Live Now
+- 🔐 **JWT Authentication** — Register, login, logout with refresh token rotation
+- 📄 **PDF Upload** — Drag and drop PDF documents with real-time status tracking
+- 🧠 **Full RAG Pipeline** — Extract → Chunk → Embed → Store, fully automated
+- 📊 **Document Management** — List, view status, and delete your documents
+- 🔒 **User Isolation** — Every user's documents are completely private
+
+### 🔲 Coming Soon
+- 💬 **AI-Powered Q&A** — Ask questions, get answers grounded in your documents
+- 🌊 **Streaming Responses** — Real-time token-by-token answer rendering
+- 📚 **Source Attribution** — See exactly which chunk answered your question
+- 🗂️ **Collection Management** — Group documents into named collections
+- 📜 **Chat History** — Persistent conversation history per user
 
 ---
 
 ## 🖼️ Screenshots
 
-### Login Page
-![Login](./screenshots/login.png)
+### Login
+![Login Page](./screenshots/login.png)
 
-### Register Page
-![Register](./screenshots/register.png)
+### Register
+![Register Page](./screenshots/register.png)
 
-### Dashboard
+### Dashboard — Document Upload & Management
 ![Dashboard](./screenshots/dashboard.png)
 
-> 📸 More screenshots will be added as features are completed.
+> 📸 Q&A chat screenshots will be added in Week 2.
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-React (MUI) Frontend  →  ASP.NET Core 8 Web API  →  RAG Pipeline
-                                                         ↓
-                                              PDF → Chunk → Embed → Qdrant
-                                                         ↓
-                                              Query → Search → GPT-4o → Answer
+┌─────────────────────────────────────────────────────────┐
+│                  React 18 + TypeScript                  │
+│           MUI styled() · Zustand · Axios                │
+└────────────────────────┬────────────────────────────────┘
+                         │ HTTP / REST
+┌────────────────────────▼────────────────────────────────┐
+│              ASP.NET Core 8 Web API                     │
+│         JWT Auth · EF Core · Serilog                    │
+└──────┬──────────────────────────────┬───────────────────┘
+       │                              │
+┌──────▼──────┐               ┌───────▼───────┐
+│  PostgreSQL │               │  RAG Pipeline │
+│  (Metadata) │               │               │
+│  · Users    │               │ PDF → Extract │
+│  · Documents│               │     → Chunk   │
+└─────────────┘               │     → Embed   │
+                              │     → Store   │
+                         ┌────▼────┐  ┌───────▼──────┐
+                         │ Qdrant  │  │ NVIDIA NIM   │
+                         │ Vectors │  │ Embeddings + │
+                         │  DB     │  │ LLM (Llama)  │
+                         └─────────┘  └──────────────┘
 ```
 
-### Tech Stack
+---
 
-| Layer | Technology |
-|---|---|
-| Frontend | React 18 + TypeScript + Material UI |
-| Styling | MUI `styled()` utility |
-| State Management | Zustand |
-| HTTP Client | Axios |
-| Backend | ASP.NET Core 8 Web API |
-| AI Orchestration | Microsoft Semantic Kernel |
-| LLM + Embeddings | OpenAI GPT-4o + text-embedding-ada-002 |
-| Vector Database | Qdrant |
-| Relational Database | PostgreSQL 16 + EF Core 8 |
-| PDF Parsing | PdfPig |
-| Auth | JWT Bearer + BCrypt |
-| Infrastructure | Docker + Docker Compose |
+## 🛠️ Tech Stack
+
+| Layer | Technology | Purpose |
+|---|---|---|
+| Frontend | React 18 + TypeScript | UI framework |
+| Styling | MUI `styled()` utility | Component styling |
+| State | Zustand | Global auth + document state |
+| HTTP | Axios | API calls with JWT interceptor |
+| Backend | ASP.NET Core 8 Web API | REST API |
+| Auth | JWT Bearer + BCrypt | Secure authentication |
+| ORM | EF Core 8 + PostgreSQL | Relational data storage |
+| PDF Parsing | PdfPig | Text extraction from PDFs |
+| Chunking | Custom sliding window | Semantic text splitting |
+| Embeddings | NVIDIA NIM (`nvidia/nv-embedqa-e5-v5`) | 1024-dim vector embeddings |
+| LLM | NVIDIA NIM (`meta/llama-4-maverick-17b-128e-instruct`) | Answer generation |
+| Vector DB | Qdrant | Semantic similarity search |
+| Logging | Serilog | Structured request logging |
+| Infrastructure | Docker + Docker Compose | PostgreSQL + Qdrant containers |
 
 ---
 
@@ -71,13 +98,13 @@ React (MUI) Frontend  →  ASP.NET Core 8 Web API  →  RAG Pipeline
 
 ### Prerequisites
 
-Make sure you have the following installed:
-
-- [Node.js 20 LTS](https://nodejs.org)
-- [.NET SDK 8.0](https://dot.net)
-- [Docker Desktop](https://docker.com/products/docker-desktop)
-- [Git](https://git-scm.com)
-- An [OpenAI API Key](https://platform.openai.com/api-keys) with billing enabled
+| Tool | Version | Download |
+|---|---|---|
+| Node.js | 20 LTS | [nodejs.org](https://nodejs.org) |
+| .NET SDK | 8.0 | [dot.net](https://dot.net) |
+| Docker Desktop | Latest | [docker.com](https://docker.com/products/docker-desktop) |
+| Git | Latest | [git-scm.com](https://git-scm.com) |
+| NVIDIA NIM API Key | — | [build.nvidia.com](https://build.nvidia.com) |
 
 ---
 
@@ -88,61 +115,31 @@ git clone https://github.com/YOUR_USERNAME/doc-qna-rag.git
 cd doc-qna-rag
 ```
 
----
-
 ### 2. Start Docker Containers
 
 ```bash
 docker-compose up -d
 ```
 
-This starts:
-- **PostgreSQL** on `localhost:5432`
-- **Qdrant** on `localhost:6333`
-
-Verify both are running:
-```bash
-docker ps
-```
-
----
+| Service | Port | Dashboard |
+|---|---|---|
+| PostgreSQL 16 | 5432 | Connect via DBeaver |
+| Qdrant Vector DB | 6333 (REST), 6334 (gRPC) | http://localhost:6333/dashboard |
 
 ### 3. Configure the Backend
 
-Navigate to the API project:
-```bash
-cd DocQnA.API
-```
+Create `DocQnA.API/appsettings.Development.json` — **gitignored, never commit:**
 
-Create `appsettings.Development.json` (this file is gitignored — never commit it):
 ```json
 {
-  "OpenAI": {
-    "ApiKey": "sk-your-openai-key-here"
+  "Nvidianim": {
+    "ApiKey": "nvapi-your-key-here",
+    "BaseUrl": "https://integrate.api.nvidia.com/v1",
+    "ChatModel": "meta/llama-4-maverick-17b-128e-instruct",
+    "EmbeddingModel": "nvidia/nv-embedqa-e5-v5"
   }
 }
 ```
-
-Verify `appsettings.json` has your JWT config:
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=docqna_db;Username=docqna_user;Password=docqna_pass123"
-  },
-  "Jwt": {
-    "SecretKey": "your-generated-secret-key",
-    "Issuer": "DocQnA",
-    "Audience": "DocQnA",
-    "ExpiryMinutes": "60"
-  },
-  "Qdrant": {
-    "Endpoint": "http://localhost:6333",
-    "VectorSize": 1536
-  }
-}
-```
-
----
 
 ### 4. Run the Backend
 
@@ -151,16 +148,9 @@ cd DocQnA.API
 dotnet run
 ```
 
-The API will be available at `http://localhost:5000`
-Swagger UI: `http://localhost:5000/swagger`
-
-> EF Core migrations run automatically on startup.
-
----
+Swagger UI → `http://localhost:5000/swagger`
 
 ### 5. Run the Frontend
-
-Open a new terminal:
 
 ```bash
 cd doc-qna-client
@@ -168,7 +158,7 @@ npm install
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`
+App → `http://localhost:5173`
 
 ---
 
@@ -176,123 +166,186 @@ The app will be available at `http://localhost:5173`
 
 ```
 DocQnA/
-├── DocQnA.API/                   # ASP.NET Core 8 Backend
-│   ├── Controllers/              # Auth, Document, QnA endpoints
-│   ├── Services/                 # Business logic
-│   ├── Models/                   # EF Core entities
-│   ├── DTOs/                     # Request/Response objects
-│   ├── Infrastructure/           # DbContext, Migrations
-│   ├── Middleware/               # Exception handling
-│   └── Program.cs                # App entry point
 │
-├── doc-qna-client/               # React + TypeScript Frontend
+├── DocQnA.API/                        # ASP.NET Core 8 Backend
+│   ├── Controllers/
+│   │   ├── AuthController.cs          # Register, Login, Refresh, Logout
+│   │   └── DocumentController.cs      # Upload, List, Delete, Status
+│   ├── Services/
+│   │   ├── AuthService.cs             # JWT auth business logic
+│   │   ├── TokenService.cs            # JWT + refresh token generation
+│   │   ├── DocumentService.cs         # Upload validation + metadata
+│   │   ├── IngestionService.cs        # RAG pipeline orchestrator
+│   │   ├── PdfExtractorService.cs     # PDF → raw text (PdfPig)
+│   │   ├── TextChunkerService.cs      # Text → overlapping chunks
+│   │   ├── NimService.cs              # NVIDIA NIM embeddings + LLM
+│   │   └── QdrantService.cs           # Vector store CRUD
+│   ├── Models/
+│   │   ├── User.cs
+│   │   └── Document.cs
+│   ├── DTOs/
+│   │   ├── AuthDTOs.cs
+│   │   └── DocumentDTOs.cs
+│   ├── Infrastructure/
+│   │   ├── AppDbContext.cs
+│   │   └── Migrations/
+│   ├── Extensions/
+│   │   └── ClaimsPrincipalExtensions.cs
+│   └── Program.cs
+│
+├── doc-qna-client/                    # React + TypeScript Frontend
 │   └── src/
-│       ├── pages/                # LoginPage, RegisterPage, DashboardPage
+│       ├── pages/
+│       │   ├── LoginPage.tsx
+│       │   ├── RegisterPage.tsx
+│       │   └── DashboardPage.tsx
 │       ├── components/
-│       │   ├── styles/           # MUI styled() components
-│       │   └── ProtectedRoute.tsx
-│       ├── api/                  # Axios API clients
-│       ├── store/                # Zustand state stores
-│       └── types/                # TypeScript interfaces
+│       │   ├── DocumentUploader.tsx   # Drag & drop PDF upload
+│       │   ├── DocumentList.tsx       # Document list + status chips
+│       │   ├── ProtectedRoute.tsx
+│       │   └── styles/
+│       │       ├── AuthStyles.ts
+│       │       └── DocumentStyles.ts
+│       ├── api/
+│       │   ├── authApi.ts
+│       │   └── documentApi.ts
+│       ├── store/
+│       │   └── authStore.ts
+│       └── types/
+│           └── index.ts
 │
-├── docker-compose.yml            # PostgreSQL + Qdrant
+├── docker-compose.yml
 └── README.md
 ```
 
 ---
 
-## 🔌 API Endpoints
+## 🔌 API Reference
 
 ### Auth
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/api/auth/register` | Register new user |
-| POST | `/api/auth/login` | Login, returns JWT tokens |
-| POST | `/api/auth/refresh` | Refresh access token |
-| POST | `/api/auth/logout` | Invalidate refresh token |
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/api/auth/register` | ❌ | Register new user |
+| POST | `/api/auth/login` | ❌ | Login, returns JWT tokens |
+| POST | `/api/auth/refresh` | ❌ | Refresh access token |
+| POST | `/api/auth/logout` | ✅ | Invalidate refresh token |
 
-### Documents *(coming soon)*
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/api/documents/upload` | Upload and ingest PDF |
-| GET | `/api/documents` | List user's documents |
-| DELETE | `/api/documents/{id}` | Delete document |
+### Documents
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/api/document/upload` | ✅ | Upload PDF, triggers RAG pipeline |
+| GET | `/api/document` | ✅ | List all user documents |
+| GET | `/api/document/{id}` | ✅ | Get document by ID |
+| GET | `/api/document/{id}/status` | ✅ | Check ingestion status |
+| DELETE | `/api/document/{id}` | ✅ | Delete document |
 
-### Q&A *(coming soon)*
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/api/qna/ask` | Ask a question |
-| GET | `/api/qna/ask-stream` | Streaming Q&A via SSE |
-| GET | `/api/qna/history` | Chat history |
+### Q&A *(Week 2)*
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/api/qna/ask` | ✅ | Ask a question |
+| GET | `/api/qna/ask-stream` | ✅ | Streaming response via SSE |
+| GET | `/api/qna/history` | ✅ | Chat history |
+
+---
+
+## 🧠 RAG Pipeline
+
+### Ingestion (on PDF upload)
+```
+1. EXTRACT   PdfPig reads all pages → raw text
+2. CHUNK     Sliding window → 2000-char chunks, 200-char overlap
+3. EMBED     Each chunk → NVIDIA NIM → 1024-dim float vector
+4. STORE     Vectors + text stored in Qdrant (one collection per document)
+5. READY     Document status updated to "ready" in PostgreSQL
+```
+
+### Query (Week 2)
+```
+1. EMBED     Question → NVIDIA NIM → 1024-dim vector
+2. SEARCH    Cosine similarity search → top 5 relevant chunks
+3. PROMPT    System prompt + context chunks + user question
+4. GENERATE  Llama via NVIDIA NIM → stream answer tokens
+5. DISPLAY   Frontend renders live with source attribution
+```
 
 ---
 
 ## 📅 Development Progress
 
-| Week | Day | Task | Status |
-|---|---|---|---|
-| 1 | Day 1 | Project setup, Docker, EF Core, PostgreSQL | ✅ Done |
-| 1 | Day 2 | JWT Auth API (Register, Login, Refresh, Logout) | ✅ Done |
-| 1 | Bonus | React Auth UI (Login, Register, Dashboard) | ✅ Done |
-| 1 | Day 3 | Document upload endpoint | ⏳ In Progress |
-| 1 | Day 4 | PDF extraction + chunking | 🔲 Pending |
-| 1 | Day 5 | Embeddings + Qdrant storage | 🔲 Pending |
-| 2 | Day 1 | Q&A service + vector search | 🔲 Pending |
-| 2 | Day 2 | LLM integration (GPT-4o) | 🔲 Pending |
-| 2 | Day 3 | Streaming SSE endpoint | 🔲 Pending |
-| 2 | Day 4 | Chat history | 🔲 Pending |
-| 2 | Day 5 | Collections management | 🔲 Pending |
-| 3 | Day 1-5 | Full React frontend (Chat UI, Upload, Source viewer) | 🔲 Pending |
-| 4 | Day 1-5 | Testing, deployment, portfolio polish | 🔲 Pending |
+### ✅ Week 1 — Backend Foundation + Auth UI + Upload UI
 
----
-
-## 🔐 Security Notes
-
-- `appsettings.Development.json` is gitignored — never commit API keys
-- Passwords are hashed with BCrypt
-- JWT access tokens expire in 60 minutes
-- Refresh tokens rotate on every login
-- Each user's documents are isolated by `UserId`
-
----
-
-## 🐳 Docker Services
-
-```yaml
-# Start all services
-docker-compose up -d
-
-# Stop all services
-docker-compose down
-
-# View logs
-docker logs docqna_postgres
-docker logs docqna_qdrant
-```
-
-| Service | Port | Dashboard |
+| Day | Task | Status |
 |---|---|---|
-| PostgreSQL | 5432 | Use DBeaver to connect |
-| Qdrant | 6333 | http://localhost:6333/dashboard |
+| Day 1 | Project setup, Docker, EF Core, PostgreSQL | ✅ Done |
+| Day 2 | JWT Auth API (Register, Login, Refresh, Logout) | ✅ Done |
+| Bonus | React Auth UI — Login + Register pages | ✅ Done |
+| Day 3 | Document upload endpoint with JWT protection | ✅ Done |
+| Day 4 | PDF text extraction + semantic chunking | ✅ Done |
+| Day 5 | NVIDIA NIM embeddings + Qdrant vector storage | ✅ Done |
+| Bonus | React Dashboard — drag & drop upload + document list | ✅ Done |
+
+### ⏳ Week 2 — Q&A Pipeline
+
+| Day | Task | Status |
+|---|---|---|
+| Day 1 | Q&A service + Qdrant vector search | ⏳ Next |
+| Day 2 | LLM integration (Llama via NVIDIA NIM) | 🔲 Pending |
+| Day 3 | Streaming SSE endpoint | 🔲 Pending |
+| Day 4 | Chat history persistence | 🔲 Pending |
+| Day 5 | Collections management | 🔲 Pending |
+
+### 🔲 Week 3 — Full Frontend
+
+| Day | Task | Status |
+|---|---|---|
+| Day 1-2 | Chat UI with streaming responses | 🔲 Pending |
+| Day 3 | Source viewer | 🔲 Pending |
+| Day 4-5 | Polish, dark mode, mobile | 🔲 Pending |
+
+### 🔲 Week 4 — Deploy & Polish
+
+| Day | Task | Status |
+|---|---|---|
+| Day 1 | Error handling + loading states | 🔲 Pending |
+| Day 2 | Unit tests | 🔲 Pending |
+| Day 3-4 | Deploy to Vercel + Railway | 🔲 Pending |
+| Day 5 | Portfolio write-up + LinkedIn | 🔲 Pending |
 
 ---
 
-## 🤝 About This Project
+## 🔐 Security
 
-This is a **portfolio project** built to demonstrate full-stack development with AI integration. It showcases:
+- `appsettings.Development.json` is gitignored — API keys never committed
+- Passwords hashed with BCrypt
+- JWT access tokens expire in 60 minutes
+- Refresh tokens rotate on every login (7-day expiry)
+- Documents isolated per user at DB and vector level
 
-- Production-grade ASP.NET Core API design with clean architecture
-- RAG (Retrieval-Augmented Generation) pipeline implementation
-- Modern React with TypeScript and component-based styling
-- Real-world AI integration using Microsoft Semantic Kernel
-- DevOps practices with Docker and CI/CD
+---
 
-**Built by:** Aviguhan — Associate Software Engineer (2.2 years experience)  
-**Target:** Full-stack / AI-integrated developer roles
+## 💰 Running Cost: $0
+
+| Service | Cost |
+|---|---|
+| NVIDIA NIM Embeddings | Free tier |
+| NVIDIA NIM LLM (Llama) | Free tier |
+| Qdrant (Docker) | Free |
+| PostgreSQL (Docker) | Free |
+| **Total** | **$0** |
+
+---
+
+## 👤 About
+
+Portfolio project by **Aviguhan** — Associate Software Engineer (2.2 years exp)
+demonstrating full-stack development with production-grade AI/RAG integration.
+
+**Targeting:** Full-stack / AI-integrated developer roles · ₹15–25 LPA
+
+**Stack:** `React` · `TypeScript` · `MUI` · `ASP.NET Core 8` · `EF Core` · `NVIDIA NIM` · `Qdrant` · `Docker`
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+MIT License

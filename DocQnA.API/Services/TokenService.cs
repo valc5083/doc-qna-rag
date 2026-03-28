@@ -19,7 +19,6 @@ namespace DocQnA.API.Services
         public string GenerateAccessToken(User user)
         {
             var secretKey = _config["Jwt:SecretKey"];
-            Console.WriteLine($"DEBUG SecretKey: {secretKey}");  // ← add this line
 
             var key = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(_config["Jwt:SecretKey"]!));

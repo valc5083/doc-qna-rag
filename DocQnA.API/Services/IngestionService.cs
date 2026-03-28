@@ -1,5 +1,4 @@
 ﻿using DocQnA.API.Infrastructure;
-using Microsoft.EntityFrameworkCore;
 
 namespace DocQnA.API.Services;
 
@@ -8,88 +7,102 @@ public class IngestionService
     private readonly AppDbContext _db;
     private readonly PdfExtractorService _pdfExtractor;
     private readonly TextChunkerService _chunker;
+    private readonly NimService _nimService;
+    private readonly QdrantService _qdrantService;
     private readonly ILogger<IngestionService> _logger;
 
     public IngestionService(
         AppDbContext db,
         PdfExtractorService pdfExtractor,
         TextChunkerService chunker,
+        NimService nimService,
+        QdrantService qdrantService,
         ILogger<IngestionService> logger)
     {
         _db = db;
         _pdfExtractor = pdfExtractor;
         _chunker = chunker;
+        _nimService = nimService;
+        _qdrantService = qdrantService;
         _logger = logger;
     }
 
-    /// <summary>
-    /// Full ingestion pipeline — extract → chunk → (embed in Day 5)
-    /// </summary>
     public async Task IngestAsync(Guid documentId, Stream pdfStream)
     {
         var document = await _db.Documents.FindAsync(documentId);
-        if (document == null)
-        {
-            _logger.LogWarning("Document {DocId} not found for ingestion", documentId);
-            return;
-        }
+        if (document == null) return;
 
         try
         {
-            _logger.LogInformation(
-                "Starting ingestion for document {DocId}", documentId);
+            document.Status = "processing";
+            await _db.SaveChangesAsync();
 
-            // ── Step 1: Extract text from PDF ─────────────────
-            _logger.LogInformation("Step 1: Extracting text from PDF...");
+            // ── Step 1: Extract text ───────────────────────────
+            _logger.LogInformation("[{DocId}] Step 1: Extracting text...", documentId);
             var extractedText = _pdfExtractor.ExtractText(pdfStream);
 
             if (string.IsNullOrWhiteSpace(extractedText))
             {
                 document.Status = "failed";
                 await _db.SaveChangesAsync();
-                _logger.LogWarning(
-                    "No text extracted from document {DocId}", documentId);
                 return;
             }
 
-            // ── Step 2: Chunk the text ─────────────────────────
-            _logger.LogInformation("Step 2: Chunking text...");
+            // ── Step 2: Chunk text ─────────────────────────────
+            _logger.LogInformation("[{DocId}] Step 2: Chunking text...", documentId);
             var chunks = _chunker.ChunkText(extractedText);
 
             if (chunks.Count == 0)
             {
                 document.Status = "failed";
                 await _db.SaveChangesAsync();
-                _logger.LogWarning(
-                    "No chunks created for document {DocId}", documentId);
                 return;
             }
 
-            // ── Step 3: Update document metadata ──────────────
+            // ── Step 3: Create Qdrant collection ───────────────
+            _logger.LogInformation("[{DocId}] Step 3: Creating Qdrant collection...", documentId);
+            await _qdrantService.CreateCollectionAsync(
+                document.QdrantCollectionName);
+
+            // ── Step 4: Embed each chunk + store in Qdrant ─────
+            _logger.LogInformation(
+                "[{DocId}] Step 4: Embedding {Count} chunks...", documentId, chunks.Count);
+
+            var points = new List<(string Id, List<float> Vector, string Text, int ChunkIndex)>();
+
+            foreach (var chunk in chunks)
+            {
+                var embedding = await _nimService.GetEmbeddingAsync(chunk.Text);
+
+                points.Add((
+                    Id: Guid.NewGuid().ToString(),
+                    Vector: embedding,
+                    Text: chunk.Text,
+                    ChunkIndex: chunk.Index
+                ));
+
+                _logger.LogInformation(
+                    "[{DocId}] Embedded chunk {Index}/{Total}",
+                    documentId, chunk.Index + 1, chunks.Count);
+            }
+
+            // ── Step 5: Batch upsert to Qdrant ─────────────────
+            _logger.LogInformation("[{DocId}] Step 5: Storing vectors in Qdrant...", documentId);
+            await _qdrantService.UpsertVectorsAsync(
+                document.QdrantCollectionName, points);
+
+            // ── Step 6: Update document status ─────────────────
             document.ChunkCount = chunks.Count;
-            document.Status = "ready"; // Will change to "embedding" in Day 5
+            document.Status = "ready";
             await _db.SaveChangesAsync();
 
             _logger.LogInformation(
-                "Ingestion complete for {DocId}. " +
-                "Extracted {CharCount} chars → {ChunkCount} chunks",
-                documentId, extractedText.Length, chunks.Count);
-
-            // Log chunk summary
-            foreach (var chunk in chunks.Take(3))
-            {
-                _logger.LogDebug(
-                    "Chunk {Index}: {TokenCount} tokens | Preview: {Preview}",
-                    chunk.Index,
-                    chunk.TokenEstimate,
-                    chunk.Text[..Math.Min(100, chunk.Text.Length)]);
-            }
+                "[{DocId}] ✅ Ingestion complete! {ChunkCount} chunks embedded.",
+                documentId, chunks.Count);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex,
-                "Ingestion failed for document {DocId}", documentId);
-
+            _logger.LogError(ex, "[{DocId}] Ingestion failed", documentId);
             document.Status = "failed";
             await _db.SaveChangesAsync();
         }

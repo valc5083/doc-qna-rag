@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, CircularProgress, Link } from "@mui/material";
+import { CircularProgress, Link } from "@mui/material";
 import { PersonAddOutlined } from "@mui/icons-material";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
 import { authApi } from "../api/authApi";
@@ -18,6 +18,7 @@ import {
   BottomLinkRow,
   BottomLinkText,
 } from "../components/styles/AuthStyles";
+import ConfirmationDialog from "../components/ConfirmationDialog";
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -70,12 +71,6 @@ const RegisterPage = () => {
             <SubTitle>Join DocQnA today</SubTitle>
           </HeaderSection>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
-              {error}
-            </Alert>
-          )}
-
           <StyledTextField
             fullWidth
             label="Email"
@@ -125,6 +120,14 @@ const RegisterPage = () => {
           </BottomLinkRow>
         </CardInner>
       </AuthCard>
+
+      <ConfirmationDialog
+        open={!!error}
+        type="error"
+        title="Registration Error"
+        message={error}
+        onClose={() => setError("")}
+      />
     </PageWrapper>
   );
 };

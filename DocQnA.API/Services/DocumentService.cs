@@ -10,15 +10,17 @@ namespace DocQnA.API.Services
         private readonly AppDbContext _db;
         private readonly ILogger<DocumentService> _logger;
         private readonly IngestionService _ingestionService;
+        private readonly IServiceScopeFactory _scopeFactory;
 
         //Max file size in bytes (e.g., 50 MB)
         private const long MaxFileSizeBytes = 50 * 1024 * 1024;
 
-        public DocumentService(AppDbContext db, ILogger<DocumentService> logger, IngestionService ingestionService)
+        public DocumentService(AppDbContext db, ILogger<DocumentService> logger, IngestionService ingestionService, IServiceScopeFactory scopeFactory)
         {
             _db = db;
             _logger = logger;
             _ingestionService = ingestionService;
+            _scopeFactory = scopeFactory;
         }
 
         public async Task<DocumentUploadResponse> UploadAsync(IFormFile file, Guid userId)
@@ -60,7 +62,7 @@ namespace DocQnA.API.Services
                 document.Id, userId, file.FileName, file.Length);
 
             // ── Trigger ingestion pipeline in background ──────────
-            // Copy stream to memory so it survives the request
+            // ── Trigger ingestion in background with its own scope ────
             var memoryStream = new MemoryStream();
             await file.CopyToAsync(memoryStream);
             memoryStream.Position = 0;
@@ -70,7 +72,17 @@ namespace DocQnA.API.Services
             {
                 try
                 {
-                    await _ingestionService.IngestAsync(docId, memoryStream);
+                    // ← Create a fresh DI scope for the background task
+                    using var scope = _scopeFactory.CreateScope();
+                    var ingestionService = scope.ServiceProvider
+                        .GetRequiredService<IngestionService>();
+
+                    await ingestionService.IngestAsync(docId, memoryStream);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Background ingestion failed for document {DocId}", docId);
                 }
                 finally
                 {

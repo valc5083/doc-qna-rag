@@ -32,6 +32,11 @@ builder.Services.AddScoped<PdfExtractorService>();
 builder.Services.AddScoped<TextChunkerService>();
 builder.Services.AddScoped<IngestionService>();
 
+// Qdrant and Nim services
+builder.Services.AddSingleton<QdrantService>();
+builder.Services.AddHttpClient("NvidiaNim");
+builder.Services.AddScoped<NimService>();
+
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:SecretKey"]!;
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

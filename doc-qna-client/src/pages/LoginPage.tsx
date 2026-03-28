@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
-import { Alert, CircularProgress, Link } from "@mui/material";
+import { CircularProgress, Link } from "@mui/material";
 import {
   PageWrapper,
   AuthCard,
@@ -18,6 +18,7 @@ import {
 import { LockOutlined } from "@mui/icons-material";
 import { authApi } from "../api/authApi";
 import { useAuthStore } from "../store/authStore";
+import ConfirmationDialog from "../components/ConfirmationDialog";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -70,12 +71,6 @@ const LoginPage = () => {
             <SubTitle>Sign in to DocQnA</SubTitle>
           </HeaderSection>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
-              {error}
-            </Alert>
-          )}
-
           <StyledTextField
             fullWidth
             label="Email"
@@ -118,6 +113,14 @@ const LoginPage = () => {
           </BottomLinkRow>
         </CardInner>
       </AuthCard>
+
+      <ConfirmationDialog
+        open={!!error}
+        type="error"
+        title="Login Error"
+        message={error || ""}
+        onClose={() => setError(null)}
+      />
     </PageWrapper>
   );
 };

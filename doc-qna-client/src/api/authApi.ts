@@ -14,6 +14,8 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+export { api };
+
 export const authApi = {
   register: async (
     data: types.IRegisterRequest,
@@ -24,7 +26,6 @@ export const authApi = {
 
   login: async (data: types.ILoginRequest): Promise<types.IAuthResponse> => {
     const response = await api.post("/auth/login", data);
-    console.log('Auth response:', response.data); // ← add this temporarily
     return response.data;
   },
 
