@@ -27,10 +27,21 @@ export const useAuthStore = create<IAuthState>((set) => ({
     set({ accessToken, email, isAuthenticated: true });
   },
   logout: () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("email");
-    localStorage.removeItem("refreshToken");
+    // Clear all localStorage
+    localStorage.clear();
+    // Clear all sessionStorage
+    sessionStorage.clear();
+    // Unregister service workers if any
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((registration) => registration.unregister());
+      });
+    }
     set({ accessToken: null, email: null, isAuthenticated: false });
+    // Force hard refresh
+    setTimeout(() => {
+      window.location.href = '/login';
+    }, 100);
   },
 }));
 

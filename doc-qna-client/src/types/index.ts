@@ -31,3 +31,39 @@ export interface DocumentListResponse {
   originalFileName: string;
   status: string;
 }
+
+export interface SourceChunk {
+  chunkIndex: number;
+  score: number;
+  text: string;
+}
+
+export interface AskRequest {
+  documentId: string;
+  question: string;
+}
+
+export interface AskResponse {
+  answer: string;
+  createdAt: string;
+  question: string;
+  sources: SourceChunk[];
+}
+
+export interface ChatHistoryItem {
+  answer: string;
+  createdAt: string;
+  documentId: string | null;
+  documentName: string | null;
+  id: string;
+  question: string;
+  sources: SourceChunk[];
+}
+
+export interface ChatBubble {
+  content: string;
+  createdAt: string;
+  id: string;
+  sources?: SourceChunk[];
+  type: "user" | "assistant";
+}

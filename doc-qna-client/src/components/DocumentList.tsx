@@ -1,12 +1,14 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
+  Button,
   Chip,
   CircularProgress,
   IconButton,
   Tooltip,
 } from "@mui/material";
-import { Delete, PictureAsPdf, Refresh } from "@mui/icons-material";
+import { Delete, PictureAsPdf, Refresh, Chat } from "@mui/icons-material";
 import { documentApi } from "../api/documentApi";
 import type { DocumentListResponse } from "../types";
 import {
@@ -51,6 +53,7 @@ const DocumentList = ({ documents, onDelete, onRefresh }: Props) => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteName, setDeleteName] = useState("");
   const [deleteError, setDeleteError] = useState("");
+  const navigate = useNavigate();
 
   const handleDelete = async (id: string, name: string) => {
     setDeleteId(id);
@@ -119,6 +122,26 @@ const DocumentList = ({ documents, onDelete, onRefresh }: Props) => {
                 size="small"
                 sx={{ fontWeight: 600, borderRadius: 6 }}
               />
+              {doc.status === "ready" && (
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<Chat />}
+                  onClick={() => navigate(`/chat/${doc.id}`)}
+                  sx={{
+                    borderRadius: 8,
+                    textTransform: "none",
+                    fontWeight: 600,
+                    fontSize: "0.8rem",
+                    background: "linear-gradient(135deg, #1F4E79, #2E75B6)",
+                    "&:hover": {
+                      background: "linear-gradient(135deg, #163d61, #1F4E79)",
+                    },
+                  }}
+                >
+                  Chat
+                </Button>
+              )}
               <DeleteButton
                 variant="outlined"
                 size="small"

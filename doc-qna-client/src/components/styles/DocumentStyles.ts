@@ -60,22 +60,22 @@ export const SectionTitle = styled(Typography)({
 });
 
 // ── Drop Zone ─────────────────────────────────────────────────
-export const DropZoneBox = styled(Box)<{ isDragActive?: boolean }>(
-  ({ isDragActive }) => ({
-    border: `2px dashed ${isDragActive ? "#2E75B6" : "#AAAAAA"}`,
-    borderRadius: 12,
-    padding: "48px 32px",
-    textAlign: "center",
-    cursor: "pointer",
-    background: isDragActive ? "#EBF3FB" : "#FAFAFA",
-    transition: "all 0.2s ease",
-    marginBottom: 32,
-    "&:hover": {
-      borderColor: "#2E75B6",
-      background: "#EBF3FB",
-    },
-  }),
-);
+export const DropZoneBox = styled(Box, {
+  shouldForwardProp: (prop) => prop !== "isDragActive",
+})<{ isDragActive?: boolean }>(({ isDragActive }) => ({
+  border: `2px dashed ${isDragActive ? "#2E75B6" : "#AAAAAA"}`,
+  borderRadius: 12,
+  padding: "48px 32px",
+  textAlign: "center",
+  cursor: "pointer",
+  background: isDragActive ? "#EBF3FB" : "#FAFAFA",
+  transition: "all 0.2s ease",
+  marginBottom: 32,
+  "&:hover": {
+    borderColor: "#2E75B6",
+    background: "#EBF3FB",
+  },
+}));
 
 export const DropZoneIcon = styled(Box)({
   fontSize: "3rem",

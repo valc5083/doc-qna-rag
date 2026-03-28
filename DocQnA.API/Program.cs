@@ -37,6 +37,9 @@ builder.Services.AddSingleton<QdrantService>();
 builder.Services.AddHttpClient("NvidiaNim");
 builder.Services.AddScoped<NimService>();
 
+// Main Q&A logic
+builder.Services.AddScoped<QnAService>();
+
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:SecretKey"]!;
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -52,6 +55,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(jwtKey))
+        };
+
+        // SSE/EventSource Support
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -96,7 +113,14 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod());
 });
 
+builder.Services.AddResponseCompression(opts =>
+{
+    opts.MimeTypes = new[] { "text/event-stream" };
+});
+
 var app = builder.Build();
+
+app.UseResponseCompression();
 
 // Auto-run migrations
 using (var scope = app.Services.CreateScope())
