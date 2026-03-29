@@ -40,6 +40,9 @@ builder.Services.AddScoped<NimService>();
 // Main Q&A logic
 builder.Services.AddScoped<QnAService>();
 
+// Collection management
+builder.Services.AddScoped<CollectionService>();
+
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:SecretKey"]!;
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

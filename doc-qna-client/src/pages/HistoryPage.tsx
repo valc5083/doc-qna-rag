@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   Box,
   CircularProgress,
@@ -47,6 +48,7 @@ import {
   StatNumber,
   StatLabel,
 } from "../components/styles/HistoryStyles";
+import ConfirmationDialog from "../components/ConfirmationDialog";
 
 const HistoryPage = () => {
   const navigate = useNavigate();
@@ -56,6 +58,7 @@ const HistoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [clearing, setClearing] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const fetchHistory = async () => {
     try {
@@ -73,17 +76,21 @@ const HistoryPage = () => {
     fetchHistory();
   }, []);
 
-  const handleClear = async () => {
-    if (!window.confirm("Clear all chat history? This cannot be undone."))
-      return;
+  const handleClear = () => {
+    setShowClearConfirm(true);
+  };
+
+  const confirmClear = async () => {
     try {
       setClearing(true);
       await qnaApi.clearHistory();
       setHistory([]);
+      toast.success("Chat history cleared successfully.");
     } catch {
-      alert("Failed to clear history.");
+      toast.error("Failed to clear history.");
     } finally {
       setClearing(false);
+      setShowClearConfirm(false);
     }
   };
 
@@ -309,6 +316,17 @@ const HistoryPage = () => {
           ))
         )}
       </MainContent>
+
+      <ConfirmationDialog
+        open={showClearConfirm}
+        type="confirm"
+        title="Clear Chat History"
+        message={`Are you sure you want to clear all chat history?\n\nNote: This action cannot be undone.`}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={confirmClear}
+        confirmText="Clear"
+        closeText="Cancel"
+      />
     </HistoryLayout>
   );
 };

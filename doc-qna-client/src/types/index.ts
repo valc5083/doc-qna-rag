@@ -67,3 +67,26 @@ export interface ChatBubble {
   sources?: SourceChunk[];
   type: "user" | "assistant";
 }
+
+export interface CollectionDocumentResponse {
+  addedAt: string;
+  chunkCount: number;
+  fileSizeBytes: number;
+  id: string;
+  originalFileName: string;
+  status: string;
+}
+
+export interface CollectionResponse {
+  createdAt: string;
+  description: string;
+  documentCount: number;
+  documents: CollectionDocumentResponse[];
+  id: string;
+  name: string;
+}
+
+export interface CreateCollectionRequest {
+  description: string;
+  name: string;
+}

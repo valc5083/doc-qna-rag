@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
+import toast from "react-hot-toast";
 import { CircularProgress, Link } from "@mui/material";
 import {
   PageWrapper,
@@ -39,17 +40,14 @@ const LoginPage = () => {
       setLoading(true);
       setError("");
       const response = await authApi.login({ email, password });
-      console.log("Calling login with:", {
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        email: response.email,
-      });
+      toast.success('Welcome back!');
       login(response.accessToken, response.refreshToken, response.email);
       navigate("/dashboard");
     } catch (err: any) {
-      setError(
-        err.response?.data?.message || "Login failed. Please try again.",
-      );
+      const errorMessage =
+        err.response?.data?.message || "Login failed. Please try again.";
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

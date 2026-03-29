@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   Box,
   CircularProgress,
@@ -235,6 +236,7 @@ const ChatPage = () => {
 
       // onError
       (error) => {
+        toast.error("Something went wrong. Please try again.");
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === assistantId ? { ...msg, content: `❌ ${error}` } : msg,

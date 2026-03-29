@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Box, Button } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { Box } from "@mui/material";
+import { History, Folder } from "@mui/icons-material";
 import { useAuthStore } from "../store/authStore";
 import { authApi } from "../api/authApi";
 import { documentApi } from "../api/documentApi";
@@ -16,8 +17,8 @@ import {
   MainContent,
   SectionTitle,
   NavHistoryButton,
+  NavCollectionButton,
 } from "../components/styles/DocumentStyles";
-import { History } from "@mui/icons-material";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -82,6 +83,13 @@ const DashboardPage = () => {
         <NavTitle>🤖 DocQnA</NavTitle>
         <Box display="flex" alignItems="center" gap={2}>
           <NavEmail>{email}</NavEmail>
+          <NavCollectionButton
+            variant="outlined"
+            startIcon={<Folder />}
+            onClick={() => navigate("/collections")}
+          >
+            Collections
+          </NavCollectionButton>
           <NavHistoryButton
             variant="outlined"
             startIcon={<History />}

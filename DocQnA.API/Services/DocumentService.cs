@@ -11,16 +11,18 @@ namespace DocQnA.API.Services
         private readonly ILogger<DocumentService> _logger;
         private readonly IngestionService _ingestionService;
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly QdrantService _qdrantService;
 
         //Max file size in bytes (e.g., 50 MB)
         private const long MaxFileSizeBytes = 50 * 1024 * 1024;
 
-        public DocumentService(AppDbContext db, ILogger<DocumentService> logger, IngestionService ingestionService, IServiceScopeFactory scopeFactory)
+        public DocumentService(AppDbContext db, ILogger<DocumentService> logger, IngestionService ingestionService, IServiceScopeFactory scopeFactory, QdrantService qdrantService)
         {
             _db = db;
             _logger = logger;
             _ingestionService = ingestionService;
             _scopeFactory = scopeFactory;
+            _qdrantService = qdrantService;
         }
 
         public async Task<DocumentUploadResponse> UploadAsync(IFormFile file, Guid userId)
@@ -144,11 +146,37 @@ namespace DocQnA.API.Services
                 throw new KeyNotFoundException("Document not found.");
             }
 
+            // ── Delete Qdrant collection first ─────────────────────
+            try
+            {
+                await _qdrantService.DeleteCollectionAsync(
+                    document.QdrantCollectionName);
+
+                _logger.LogInformation(
+                    "Deleted Qdrant collection {Collection} for doc {DocId}",
+                    document.QdrantCollectionName, documentId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to delete Qdrant collection {Collection} — continuing with DB delete",
+                    document.QdrantCollectionName);
+                // Don't block deletion if Qdrant fails
+            }
+
+            // ── Delete chat messages for this document ─────────────
+            var chatMessages = await _db.ChatMessages
+                .Where(c => c.DocumentId == documentId)
+                .ToListAsync();
+            _db.ChatMessages.RemoveRange(chatMessages);
+
+            // ── Delete document from PostgreSQL ────────────────────
             _db.Documents.Remove(document);
             await _db.SaveChangesAsync();
 
-            _logger.LogInformation("Document {DocumentId} deleted by user {UserId}. Original file name: {FileName}", 
-                document.Id, userId, document.OriginalFileName);
+            _logger.LogInformation(
+                "Document {DocId} fully deleted — DB + Qdrant + ChatMessages",
+                documentId);
 
             return true;
         }

@@ -6,6 +6,7 @@ import ChatPage from "./pages/ChatPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import HistoryPage from "./pages/HistoryPage";
+import CollectionsPage from "./pages/CollectionPage";
 
 function App() {
   return (
@@ -39,6 +40,17 @@ function App() {
             <ProtectedRoute>
               <ErrorBoundary>
                 <HistoryPage />
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/collections"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                <CollectionsPage />
               </ErrorBoundary>
             </ProtectedRoute>
           }

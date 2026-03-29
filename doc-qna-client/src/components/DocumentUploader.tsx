@@ -1,10 +1,11 @@
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
+import toast from "react-hot-toast";
 import { CircularProgress } from "@mui/material";
 import { CloudUpload } from "@mui/icons-material";
 import { documentApi } from "../api/documentApi";
 import type { DocumentListResponse } from "../types";
-import ConfirmationDialog from "./ConfirmationDialog";
+// import ConfirmationDialog from "./ConfirmationDialog";
 import {
   DropZoneBox,
   DropZoneIcon,
@@ -19,9 +20,8 @@ interface Props {
 
 const DocumentUploader = ({ onUploadSuccess }: Props) => {
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [showDialog, setShowDialog] = useState(false);
+  // const [error, setError] = useState("");
+  // const [success, setSuccess] = useState("");
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -30,18 +30,18 @@ const DocumentUploader = ({ onUploadSuccess }: Props) => {
 
       // Validate
       if (!file.name.endsWith(".pdf")) {
-        setError("Only PDF files are supported.");
+        toast.error("Only PDF files are supported.");
         return;
       }
       if (file.size > 50 * 1024 * 1024) {
-        setError("File size must be under 50MB.");
+        toast.error("File size must be under 50MB.");
         return;
       }
 
       try {
         setUploading(true);
-        setError("");
-        setSuccess("");
+        // setError("");
+        // setSuccess("");
 
         const response = await documentApi.upload(file);
 
@@ -55,11 +55,10 @@ const DocumentUploader = ({ onUploadSuccess }: Props) => {
           createdAt: response.createdAt,
         };
 
-        setSuccess(`"${file.name}" uploaded! Processing in background...`);
-        setShowDialog(true);
+        toast.success(`"${file.name}" uploaded! Processing in background...`);
         onUploadSuccess(doc);
       } catch (err: any) {
-        setError(
+        toast.error(
           err.response?.data?.message || "Upload failed. Please try again.",
         );
       } finally {
@@ -103,21 +102,13 @@ const DocumentUploader = ({ onUploadSuccess }: Props) => {
         )}
       </DropZoneBox>
 
-      <ConfirmationDialog
-        open={showDialog}
-        type="confirm"
-        title="Upload Successful"
-        message={success}
-        onClose={() => setShowDialog(false)}
-      />
-
-      <ConfirmationDialog
+      {/* <ConfirmationDialog
         open={!!error}
         type="error"
         title="Upload Error"
         message={error}
         onClose={() => setError("")}
-      />
+      /> */}
     </div>
   );
 };

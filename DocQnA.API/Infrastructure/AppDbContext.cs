@@ -10,6 +10,9 @@ public class AppDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<Collection> Collections => Set<Collection>();           // ← add
+    public DbSet<CollectionDocument> CollectionDocuments               // ← add
+        => Set<CollectionDocument>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -38,5 +41,28 @@ public class AppDbContext : DbContext
             .WithMany()
             .HasForeignKey(c => c.DocumentId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        // ── Collections ────────────────────────────────────────
+        modelBuilder.Entity<Collection>()
+            .HasOne(c => c.User)
+            .WithMany()
+            .HasForeignKey(c => c.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // ── CollectionDocument (join table) ────────────────────
+        modelBuilder.Entity<CollectionDocument>()
+            .HasKey(cd => new { cd.CollectionId, cd.DocumentId });
+
+        modelBuilder.Entity<CollectionDocument>()
+            .HasOne(cd => cd.Collection)
+            .WithMany(c => c.CollectionDocuments)
+            .HasForeignKey(cd => cd.CollectionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CollectionDocument>()
+            .HasOne(cd => cd.Document)
+            .WithMany()
+            .HasForeignKey(cd => cd.DocumentId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

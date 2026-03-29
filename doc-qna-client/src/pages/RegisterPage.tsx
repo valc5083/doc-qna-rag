@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { CircularProgress, Link } from "@mui/material";
 import { PersonAddOutlined } from "@mui/icons-material";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
@@ -48,12 +49,13 @@ const RegisterPage = () => {
       setLoading(true);
       setError("");
       const response = await authApi.register({ email, password });
+      toast.success("Account created! Welcome to DocQnA!");
       login(response.accessToken, response.refreshToken, response.email);
       navigate("/dashboard");
     } catch (err: any) {
-      setError(
-        err.response?.data?.message || "Registration failed. Please try again.",
-      );
+      const msg = err.response?.data?.message || "Registration failed.";
+      toast.error(msg);
+      setError(msg);
     } finally {
       setLoading(false);
     }

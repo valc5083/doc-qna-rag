@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   Box,
   Button,
@@ -70,8 +71,9 @@ const DocumentList = ({ documents, onDelete, onRefresh }: Props) => {
       setShowDeleteConfirm(false);
       setDeleteId(null);
       setDeleteName("");
+      toast.success(`"${deleteName}" deleted successfully.`);
     } catch {
-      setDeleteError("Delete failed. Please try again.");
+      toast.error("Delete failed. Please try again.");
       setShowDeleteConfirm(false);
     } finally {
       setDeleting(null);
