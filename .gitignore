@@ -5,6 +5,8 @@ obj/
 *.suo
 .vs/
 *.log
+.env
+.env.production
 
 ## Secrets — NEVER commit these
 appsettings.Development.json

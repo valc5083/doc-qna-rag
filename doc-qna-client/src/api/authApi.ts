@@ -3,7 +3,7 @@ import axios from "axios";
 import * as types from "../types";
 
 const api = axios.create({
-  baseURL: "https://localhost:7260/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://localhost:7260/api',
 });
 
 // Attach JWT Token to every request automatically

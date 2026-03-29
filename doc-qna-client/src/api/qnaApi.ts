@@ -24,8 +24,12 @@ export const qnaApi = {
     onDone: () => void,
     onError: (error: string) => void,
   ): EventSource => {
+    const baseUrl =
+      import.meta.env.VITE_API_BASE_URL || "https://localhost:7260/api";
+
+    const apiBase = baseUrl.replace("/api", "");
     const url =
-      `https://localhost:7260/api/qna/ask-stream` +
+      `${apiBase}/api/qna/ask-stream` +
       `?question=${encodeURIComponent(question)}` +
       `&documentId=${encodeURIComponent(documentId)}` +
       `&access_token=${encodeURIComponent(token)}`;

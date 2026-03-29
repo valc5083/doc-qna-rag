@@ -459,7 +459,7 @@ const ChatPage = () => {
           </Typography>
         ) : (
           <List disablePadding>
-            {chatHistory.map((item, i) => (
+            {chatHistory.map((item) => (
               <ListItem
                 key={item.id}
                 disablePadding

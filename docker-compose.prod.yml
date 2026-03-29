@@ -1,0 +1,60 @@
+services:
+  api:
+    build:
+      context: ./DocQnA.API
+      dockerfile: Dockerfile
+    container_name: docqna_api
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=docqna_db;Username=docqna_user;Password=docqna_pass123
+      - Jwt__SecretKey=${JWT_SECRET_KEY}
+      - Jwt__Issuer=DocQnA
+      - Jwt__Audience=DocQnA
+      - Jwt__ExpiryMinutes=60
+      - Qdrant__Endpoint=http://qdrant:6333
+      - Qdrant__VectorSize=1024
+      - Nvidianim__ApiKey=${NVIDIA_API_KEY}
+      - Nvidianim__BaseUrl=https://integrate.api.nvidia.com/v1
+      - Nvidianim__ChatModel=meta/llama-4-maverick-17b-128e-instruct
+      - Nvidianim__EmbeddingModel=nvidia/nv-embedqa-e5-v5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16
+    container_name: docqna_postgres_prod
+    environment:
+      POSTGRES_USER: docqna_user
+      POSTGRES_PASSWORD: docqna_pass123
+      POSTGRES_DB: docqna_db
+      PGTZ: Asia/Kolkata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docqna_user -d docqna_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: docqna_qdrant_prod
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  qdrant_data:
