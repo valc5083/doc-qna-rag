@@ -14,8 +14,26 @@ public class QdrantService
         _logger = logger;
         _vectorSize = config.GetValue<int>("Qdrant:VectorSize", 1024);
 
-        // ← Explicitly use gRPC port 6334
-        _client = new QdrantClient("localhost", 6334);
+        var endpoint = config["Qdrant:Endpoint"] ?? "http://localhost:6333";
+        var apiKey = config["Qdrant:ApiKey"];
+        var uri = new Uri(endpoint);
+
+        // ← Support both local (no auth) and cloud (with API key)
+        if (!string.IsNullOrEmpty(apiKey))
+        {
+            _client = new QdrantClient(
+                host: uri.Host,
+                port: uri.Port,
+                https: uri.Scheme == "https",
+                apiKey: apiKey);
+        }
+        else
+        {
+            _client = new QdrantClient(
+                host: uri.Host,
+                port: uri.Port == 443 ? 6334 : uri.Port,
+                https: false);
+        }
     }
 
     // ── Create Collection ─────────────────────────────────────

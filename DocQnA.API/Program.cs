@@ -125,7 +125,8 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReact", policy =>
         policy.WithOrigins("http://localhost:5173",
-        "https://doc-qna-rag-v2pu.vercel.app"
+        "https://doc-qna-rag-v2pu.vercel.app",
+        "https://docqna-api.onrender.com"
         )
               .AllowAnyHeader()
               .AllowAnyMethod());
@@ -137,7 +138,7 @@ builder.Services.AddHealthChecks()
         builder.Configuration.GetConnectionString("DefaultConnection")!,
         name: "postgresql")
     .AddUrlGroup(
-        new Uri("http://localhost:6333/healthz"),
+        new Uri(builder.Configuration["Qdrant:Endpoint"] + "/healthz"),
         name: "qdrant");
 
 // ── Response Compression ──────────────────────────────────────
