@@ -24,33 +24,31 @@ export const qnaApi = {
     onDone: () => void,
     onError: (error: string) => void,
   ): EventSource => {
-    const baseUrl =
-      import.meta.env.VITE_API_BASE_URL || "https://localhost:7260/api";
+    // ← Build SSE URL from env variable
+    const baseUrl = (
+      import.meta.env.VITE_API_BASE_URL || "https://localhost:7260/api"
+    ).replace(/\/api$/, ""); // remove trailing /api
 
-    const apiBase = baseUrl.replace("/api", "");
     const url =
-      `${apiBase}/api/qna/ask-stream` +
+      `${baseUrl}/api/qna/ask-stream` +
       `?question=${encodeURIComponent(question)}` +
       `&documentId=${encodeURIComponent(documentId)}` +
       `&access_token=${encodeURIComponent(token)}`;
 
     const eventSource = new EventSource(url);
 
-    eventSource.addEventListener("sources", (e) => {
-      try {
-        const raw = (e as MessageEvent).data;
-        const sources = JSON.parse(raw);
-        onSources(sources);
-      } catch (err) {
-        toast.error("Failed to parse source information.");
-      }
-    });
-
     eventSource.addEventListener("token", (e) => {
       const text = (e as MessageEvent).data
         .replace(/\\n/g, "\n")
         .replace(/\\\\/g, "\\");
       onToken(text);
+    });
+
+    eventSource.addEventListener("sources", (e) => {
+      try {
+        const sources = JSON.parse((e as MessageEvent).data);
+        onSources(sources);
+      } catch {}
     });
 
     eventSource.addEventListener("status", (e) => {
