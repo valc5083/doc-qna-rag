@@ -18,12 +18,6 @@ export const useAuthStore = create<IAuthState>((set) => ({
     localStorage.setItem("accessToken", accessToken);
     localStorage.setItem("refreshToken", refreshToken);
     localStorage.setItem("email", email);
-    // DEBUG
-    console.log("Stored in localStorage:", {
-      accessToken: localStorage.getItem("accessToken")?.substring(0, 20),
-      refreshToken: localStorage.getItem("refreshToken"),
-      email: localStorage.getItem("email"),
-    });
     set({ accessToken, email, isAuthenticated: true });
   },
   logout: () => {

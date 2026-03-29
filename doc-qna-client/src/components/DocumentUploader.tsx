@@ -1,11 +1,10 @@
-import { useCallback, useState } from "react";
-import { useDropzone } from "react-dropzone";
+import { useCallback } from "react";
+import { useDropzone, type FileRejection } from "react-dropzone";
 import toast from "react-hot-toast";
 import { CircularProgress } from "@mui/material";
 import { CloudUpload } from "@mui/icons-material";
 import { documentApi } from "../api/documentApi";
 import type { DocumentListResponse } from "../types";
-// import ConfirmationDialog from "./ConfirmationDialog";
 import {
   DropZoneBox,
   DropZoneIcon,
@@ -13,6 +12,7 @@ import {
   DropZoneSubText,
   UploadProgressBar,
 } from "./styles/DocumentStyles";
+import { useState } from "react";
 
 interface Props {
   onUploadSuccess: (doc: DocumentListResponse) => void;
@@ -20,19 +20,12 @@ interface Props {
 
 const DocumentUploader = ({ onUploadSuccess }: Props) => {
   const [uploading, setUploading] = useState(false);
-  // const [error, setError] = useState("");
-  // const [success, setSuccess] = useState("");
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       const file = acceptedFiles[0];
       if (!file) return;
 
-      // Validate
-      if (!file.name.endsWith(".pdf")) {
-        toast.error("Only PDF files are supported.");
-        return;
-      }
       if (file.size > 50 * 1024 * 1024) {
         toast.error("File size must be under 50MB.");
         return;
@@ -40,12 +33,7 @@ const DocumentUploader = ({ onUploadSuccess }: Props) => {
 
       try {
         setUploading(true);
-        // setError("");
-        // setSuccess("");
-
         const response = await documentApi.upload(file);
-
-        // Convert upload response to list response shape
         const doc: DocumentListResponse = {
           id: response.id,
           originalFileName: response.originalFileName,
@@ -54,7 +42,6 @@ const DocumentUploader = ({ onUploadSuccess }: Props) => {
           fileSizeBytes: response.fileSizeBytes,
           createdAt: response.createdAt,
         };
-
         toast.success(`"${file.name}" uploaded! Processing in background...`);
         onUploadSuccess(doc);
       } catch (err: any) {
@@ -68,11 +55,30 @@ const DocumentUploader = ({ onUploadSuccess }: Props) => {
     [onUploadSuccess],
   );
 
+  // ← This fires when a non-PDF is dropped or selected
+  const onDropRejected = useCallback((fileRejections: FileRejection[]) => {
+    const rejection = fileRejections[0];
+    if (!rejection) return;
+
+    const error = rejection.errors[0];
+    if (error?.code === "file-invalid-type") {
+      toast.error(
+        `"${rejection.file.name}" is not a PDF. Only PDF files are supported.`,
+      );
+    } else if (error?.code === "file-too-large") {
+      toast.error("File size must be under 50MB.");
+    } else {
+      toast.error("Invalid file. Please upload a PDF.");
+    }
+  }, []);
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
+    onDropRejected, // ← add this
     accept: { "application/pdf": [".pdf"] },
     multiple: false,
     disabled: uploading,
+    maxSize: 50 * 1024 * 1024,
   });
 
   return (
@@ -97,18 +103,12 @@ const DocumentUploader = ({ onUploadSuccess }: Props) => {
         ) : (
           <>
             <DropZoneText>Drag & drop a PDF here</DropZoneText>
-            <DropZoneSubText>or click to browse — Max 50MB</DropZoneSubText>
+            <DropZoneSubText>
+              or click to browse — Max 50MB, PDF only
+            </DropZoneSubText>
           </>
         )}
       </DropZoneBox>
-
-      {/* <ConfirmationDialog
-        open={!!error}
-        type="error"
-        title="Upload Error"
-        message={error}
-        onClose={() => setError("")}
-      /> */}
     </div>
   );
 };

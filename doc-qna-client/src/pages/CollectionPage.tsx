@@ -58,11 +58,14 @@ import {
 } from "../components/styles/CollectionStyles";
 import { HistoryLayout } from "../components/styles/HistoryStyles";
 import ConfirmationDialog from "../components/ConfirmationDialog";
+import { CollectionListSkeleton } from "../components/skeletons/CollectionSkeleton";
+import usePageTitle from "../hooks/usePageTitle";
 
 const CollectionsPage = () => {
   const navigate = useNavigate();
-  const { email, logout } = useAuthStore();
+  usePageTitle('Collections');
 
+  const { email, logout } = useAuthStore();
   const [collections, setCollections] = useState<CollectionResponse[]>([]);
   const [documents, setDocuments] = useState<DocumentListResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -214,7 +217,7 @@ const CollectionsPage = () => {
       <NavBar>
         <Box display="flex" alignItems="center" gap={2}>
           <IconButton
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate(-1)}
             sx={{ color: "#ffffff" }}
           >
             <ArrowBack />
@@ -282,9 +285,7 @@ const CollectionsPage = () => {
 
         {/* Loading */}
         {loading ? (
-          <Box textAlign="center" py={8}>
-            <CircularProgress />
-          </Box>
+          <CollectionListSkeleton />
         ) : collections.length === 0 ? (
           <EmptyCollectionBox>
             <FolderOpen sx={{ fontSize: 64, mb: 2, opacity: 0.2 }} />

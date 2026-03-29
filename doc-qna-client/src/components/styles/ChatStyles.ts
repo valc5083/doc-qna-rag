@@ -58,6 +58,11 @@ export const MessagesArea = styled(Box)({
 export const UserBubble = styled(Box)({
   alignSelf: "flex-end",
   maxWidth: "70%",
+
+  '@media (max-width: 600px)': {
+    maxWidth: '90%',
+  },
+
   background: "linear-gradient(135deg, #1F4E79, #2E75B6)",
   color: "#ffffff",
   borderRadius: "18px 18px 4px 18px",
@@ -71,6 +76,11 @@ export const UserBubble = styled(Box)({
 export const AssistantBubble = styled(Paper)({
   alignSelf: "flex-start",
   maxWidth: "75%",
+
+  '@media (max-width: 600px)': {
+    maxWidth: '92%',
+  },
+  
   borderRadius: "18px 18px 18px 4px",
   padding: "16px 20px",
   boxShadow: "0 2px 8px rgba(0,0,0,0.08)",

@@ -20,11 +20,12 @@ import { LockOutlined } from "@mui/icons-material";
 import { authApi } from "../api/authApi";
 import { useAuthStore } from "../store/authStore";
 import ConfirmationDialog from "../components/ConfirmationDialog";
+import usePageTitle from "../hooks/usePageTitle";
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login } = useAuthStore();
-
+  usePageTitle('Login');
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);

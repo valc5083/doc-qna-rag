@@ -1,7 +1,12 @@
 using System.Text;
 using DocQnA.API.Infrastructure;
+using DocQnA.API.Middleware;
 using DocQnA.API.Services;
+using DocQnA.API.Validators;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -9,18 +14,18 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Serilog
+// ── Serilog ───────────────────────────────────────────────────
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateLogger();
 builder.Host.UseSerilog();
 
-// EF Core + PostgreSQL
+// ── EF Core + PostgreSQL ──────────────────────────────────────
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Register Services
+// ── Services ──────────────────────────────────────────────────
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<AuthService>();
 
@@ -31,19 +36,17 @@ builder.Services.AddScoped<DocumentService>();
 builder.Services.AddScoped<PdfExtractorService>();
 builder.Services.AddScoped<TextChunkerService>();
 builder.Services.AddScoped<IngestionService>();
-
-// Qdrant and Nim services
+builder.Services.AddScoped<QnAService>();
+builder.Services.AddScoped<CollectionService>();
 builder.Services.AddSingleton<QdrantService>();
 builder.Services.AddHttpClient("NvidiaNim");
 builder.Services.AddScoped<NimService>();
 
-// Main Q&A logic
-builder.Services.AddScoped<QnAService>();
+// ── FluentValidation ──────────────────────────────────────────
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
 
-// Collection management
-builder.Services.AddScoped<CollectionService>();
-
-// JWT Authentication
+// ── JWT Authentication ────────────────────────────────────────
 var jwtKey = builder.Configuration["Jwt:SecretKey"]!;
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -60,29 +63,39 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 Encoding.UTF8.GetBytes(jwtKey))
         };
 
-        // SSE/EventSource Support
+        // SSE / EventSource JWT support
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
             {
                 var accessToken = context.Request.Query["access_token"];
                 if (!string.IsNullOrEmpty(accessToken))
-                {
                     context.Token = accessToken;
-                }
                 return Task.CompletedTask;
             }
         };
     });
 
 builder.Services.AddAuthorization();
-builder.Services.AddControllers();
 
-// Swagger with JWT support
+// ── Controllers ───────────────────────────────────────────────
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy =
+            System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
+
+// ── Swagger ───────────────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "DocQnA API", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "DocQnA API",
+        Version = "v1",
+        Description = "RAG-based Document Q&A API"
+    });
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "Enter: Bearer {your JWT token}",
@@ -107,7 +120,7 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// CORS
+// ── CORS ──────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReact", policy =>
@@ -116,6 +129,16 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod());
 });
 
+// ── Health Checks ─────────────────────────────────────────────
+builder.Services.AddHealthChecks()
+    .AddNpgSql(
+        builder.Configuration.GetConnectionString("DefaultConnection")!,
+        name: "postgresql")
+    .AddUrlGroup(
+        new Uri("http://localhost:6333/healthz"),
+        name: "qdrant");
+
+// ── Response Compression ──────────────────────────────────────
 builder.Services.AddResponseCompression(opts =>
 {
     opts.MimeTypes = new[] { "text/event-stream" };
@@ -123,14 +146,16 @@ builder.Services.AddResponseCompression(opts =>
 
 var app = builder.Build();
 
-app.UseResponseCompression();
-
-// Auto-run migrations
+// ── Auto-run Migrations ───────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var db = scope.ServiceProvider
+        .GetRequiredService<AppDbContext>();
     db.Database.Migrate();
 }
+
+// ── Middleware Pipeline ───────────────────────────────────────
+app.UseMiddleware<ExceptionMiddleware>(); // ← Global error handler
 
 if (app.Environment.IsDevelopment())
 {
@@ -138,10 +163,30 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseResponseCompression();
 app.UseCors("AllowReact");
-app.UseHttpsRedirection();
-app.UseAuthentication();  // ← must be before UseAuthorization
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// ── Health Check Endpoint ─────────────────────────────────────
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                duration = e.Value.Duration.TotalMilliseconds + "ms"
+            }),
+            totalDuration = report.TotalDuration.TotalMilliseconds + "ms"
+        });
+    }
+});
 
 app.Run();

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { Box } from "@mui/material";
 import { History, Folder } from "@mui/icons-material";
 import { useAuthStore } from "../store/authStore";
@@ -19,9 +20,12 @@ import {
   NavHistoryButton,
   NavCollectionButton,
 } from "../components/styles/DocumentStyles";
+import { DocumentListSkeleton } from "../components/skeletons/DocumentSkeleton";
+import usePageTitle from "../hooks/usePageTitle";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
+  usePageTitle('Dashboard');
   const { email, logout } = useAuthStore();
   const [documents, setDocuments] = useState<DocumentListResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +36,7 @@ const DashboardPage = () => {
       const docs = await documentApi.getAll();
       setDocuments(docs);
     } catch (err) {
-      console.error("Failed to fetch documents", err);
+      toast.error("Failed to load documents.");
     } finally {
       setLoading(false);
     }
@@ -114,9 +118,7 @@ const DashboardPage = () => {
 
         {/* Document List */}
         {loading ? (
-          <Box textAlign="center" py={4}>
-            Loading documents...
-          </Box>
+          <DocumentListSkeleton />
         ) : (
           <DocumentList
             documents={documents}

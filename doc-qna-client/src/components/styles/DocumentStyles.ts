@@ -17,6 +17,12 @@ export const NavBar = styled(Box)({
   alignItems: "center",
   justifyContent: "space-between",
   boxShadow: "0 2px 12px rgba(0,0,0,0.2)",
+
+  "@media (max-width: 600px)": {
+    padding: "12px 16px",
+    flexWrap: "wrap",
+    gap: 8,
+  },
 });
 
 export const NavTitle = styled(Typography)({
@@ -32,13 +38,15 @@ export const NavEmail = styled(Typography)({
 
 export const NavLogoutButton = styled(Button)({
   color: "#ffffff",
-  borderColor: "rgba(255,255,255,0.5)",
+  background: "rgb(255, 8, 0)",
+  borderColor: "rgba(255, 255, 255, 0.67)",
   borderRadius: 8,
   textTransform: "none",
   fontWeight: 600,
+  fontSize: "0.85rem",
   "&:hover": {
-    borderColor: "#ffffff",
-    background: "rgba(255,255,255,0.1)",
+    borderColor: "#ffcdd2",
+    background: "rgba(245, 5, 29, 0.91)",
   },
 });
 
@@ -48,9 +56,11 @@ export const NavHistoryButton = styled(Button)({
   borderRadius: 8,
   textTransform: "none",
   fontWeight: 600,
+  fontSize: "0.85rem",
+  background: "rgba(255,255,255,0.15)",
   "&:hover": {
     borderColor: "#ffffff",
-    background: "rgba(255,255,255,0.1)",
+    background: "rgba(255,255,255,0.25)",
   },
 });
 
@@ -60,9 +70,11 @@ export const NavCollectionButton = styled(Button)({
   borderRadius: 8,
   textTransform: "none",
   fontWeight: 600,
+  fontSize: "0.85rem",
+  background: "rgba(255,255,255,0.15)",
   "&:hover": {
     borderColor: "#ffffff",
-    background: "rgba(255,255,255,0.1)",
+    background: "rgba(255,255,255,0.25)",
   },
 });
 
@@ -73,6 +85,10 @@ export const MainContent = styled(Box)({
   maxWidth: 1000,
   margin: "0 auto",
   width: "100%",
+
+  "@media (max-width: 600px)": {
+    padding: "16px",
+  },
 });
 
 // ── Section Title ─────────────────────────────────────────────

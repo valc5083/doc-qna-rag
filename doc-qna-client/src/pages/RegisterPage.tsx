@@ -20,10 +20,12 @@ import {
   BottomLinkText,
 } from "../components/styles/AuthStyles";
 import ConfirmationDialog from "../components/ConfirmationDialog";
+import usePageTitle from "../hooks/usePageTitle";
 
 const RegisterPage = () => {
   const navigate = useNavigate();
   const { login } = useAuthStore();
+  usePageTitle('Register');
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

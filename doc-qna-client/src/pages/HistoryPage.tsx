@@ -49,16 +49,20 @@ import {
   StatLabel,
 } from "../components/styles/HistoryStyles";
 import ConfirmationDialog from "../components/ConfirmationDialog";
+import { HistoryListSkeleton } from "../components/skeletons/HistorySkeletons";
+import usePageTitle from "../hooks/usePageTitle";
 
 const HistoryPage = () => {
   const navigate = useNavigate();
-  const { email, logout } = useAuthStore();
+  usePageTitle("Chat History");
 
+  const { email, logout } = useAuthStore();
   const [history, setHistory] = useState<ChatHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [clearing, setClearing] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchHistory = async () => {
     try {
@@ -66,7 +70,7 @@ const HistoryPage = () => {
       const data = await qnaApi.getHistory(50);
       setHistory(data);
     } catch (err) {
-      console.error("Failed to fetch history", err);
+      toast.error("Failed to load history.");
     } finally {
       setLoading(false);
     }
@@ -101,6 +105,19 @@ const HistoryPage = () => {
     navigate("/login");
   };
 
+  const handleDeleteOne = async (id: string) => {
+    try {
+      setDeletingId(id);
+      await qnaApi.deleteOne(id);
+      setHistory((prev) => prev.filter((h) => h.id !== id));
+      toast.success("Conversation deleted.");
+    } catch {
+      toast.error("Failed to delete.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
@@ -122,10 +139,7 @@ const HistoryPage = () => {
       {/* Nav Bar */}
       <NavBar>
         <Box display="flex" alignItems="center" gap={2}>
-          <IconButton
-            onClick={() => navigate("/dashboard")}
-            sx={{ color: "#ffffff" }}
-          >
+          <IconButton onClick={() => navigate(-1)} sx={{ color: "#ffffff" }}>
             <ArrowBack />
           </IconButton>
           <NavTitle>📜 Chat History</NavTitle>
@@ -184,12 +198,7 @@ const HistoryPage = () => {
 
         {/* Loading */}
         {loading ? (
-          <Box textAlign="center" py={8}>
-            <CircularProgress />
-            <Typography mt={2} color="text.secondary">
-              Loading history...
-            </Typography>
-          </Box>
+          <HistoryListSkeleton />
         ) : history.length === 0 ? (
           <EmptyHistoryBox>
             <QuestionAnswer sx={{ fontSize: 64, mb: 2, opacity: 0.2 }} />
@@ -253,6 +262,21 @@ const HistoryPage = () => {
                       </IconButton>
                     </Tooltip>
                   )}
+
+                  <Tooltip title="Delete this conversation">
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDeleteOne(item.id)}
+                      disabled={deletingId === item.id}
+                      sx={{ color: "#e53935" }}
+                    >
+                      {deletingId === item.id ? (
+                        <CircularProgress size={14} />
+                      ) : (
+                        <Delete fontSize="small" />
+                      )}
+                    </IconButton>
+                  </Tooltip>
 
                   {/* Expand toggle */}
                   <Tooltip

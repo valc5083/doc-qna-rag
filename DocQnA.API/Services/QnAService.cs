@@ -301,4 +301,17 @@ public class QnAService
         _db.ChatMessages.RemoveRange(messages);
         await _db.SaveChangesAsync();
     }
+
+    public async Task DeleteOneAsync(Guid messageId, Guid userId)
+    {
+        var message = await _db.ChatMessages
+            .FirstOrDefaultAsync(c =>
+                c.Id == messageId && c.UserId == userId);
+
+        if (message != null)
+        {
+            _db.ChatMessages.Remove(message);
+            await _db.SaveChangesAsync();
+        }
+    }
 }

@@ -84,4 +84,13 @@ public class QnAController : ControllerBase
         await _qnAService.ClearHistoryAsync(userId);
         return NoContent();
     }
+
+    /// <summary>Delete a single chat message</summary>
+    [HttpDelete("history/{id:guid}")]
+    public async Task<IActionResult> DeleteOne(Guid id)
+    {
+        var userId = User.GetUserId();
+        await _qnAService.DeleteOneAsync(id, userId);
+        return NoContent();
+    }
 }

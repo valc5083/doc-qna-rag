@@ -1,3 +1,4 @@
+import toast from "react-hot-toast";
 import { api } from "./authApi";
 import type {
   AskRequest,
@@ -34,12 +35,10 @@ export const qnaApi = {
     eventSource.addEventListener("sources", (e) => {
       try {
         const raw = (e as MessageEvent).data;
-        console.log("RAW SOURCES DATA:", raw); // ← add this
         const sources = JSON.parse(raw);
-        console.log("PARSED SOURCES:", sources); // ← add this
         onSources(sources);
       } catch (err) {
-        console.error("Sources parse error:", err, (e as MessageEvent).data);
+        toast.error("Failed to parse source information.");
       }
     });
 
@@ -82,5 +81,9 @@ export const qnaApi = {
 
   clearHistory: async (): Promise<void> => {
     await api.delete("/qna/history");
+  },
+
+  deleteOne: async (id: string): Promise<void> => {
+    await api.delete(`/qna/history/${id}`);
   },
 };

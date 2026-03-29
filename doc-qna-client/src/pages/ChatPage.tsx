@@ -40,6 +40,7 @@ import {
   EmptyChatText,
   EmptyChatSub,
 } from "../components/styles/ChatStyles";
+import usePageTitle from "../hooks/usePageTitle";
 
 const ChatPage = () => {
   const { documentId } = useParams<{ documentId: string }>();
@@ -49,6 +50,9 @@ const ChatPage = () => {
   const selectedHistoryId = location.state?.selectedHistoryId;
 
   const [document, setDocument] = useState<DocumentListResponse | null>(null);
+  usePageTitle(
+    document?.originalFileName ? `Chat — ${document.originalFileName}` : "Chat",
+  );
   const [messages, setMessages] = useState<ChatBubble[]>([]);
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
@@ -320,7 +324,7 @@ const ChatPage = () => {
           <BackButton
             variant="outlined"
             startIcon={<ArrowBack />}
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate(-1)}
           >
             Back
           </BackButton>
