@@ -25,11 +25,13 @@ public class QdrantService
         if (!string.IsNullOrEmpty(apiKey))
         {
             // ← Qdrant Cloud — uses HTTPS port 6333 with API key
-            _client = new QdrantClient(
-                host: uri.Host,
-                port: 6333,
-                https: true,
-                apiKey: apiKey);
+            _client = new QdrantClient
+            (
+               host: uri.Host,
+                port: uri.Port == -1 ? 443 : uri.Port,
+                https: uri.Scheme == "https",
+                apiKey: apiKey
+            );
         }
         else
         {

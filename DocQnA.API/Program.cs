@@ -138,7 +138,7 @@ builder.Services.AddHealthChecks()
         builder.Configuration.GetConnectionString("DefaultConnection")!,
         name: "postgresql")
     .AddUrlGroup(
-        new Uri(builder.Configuration["Qdrant:Endpoint"] + "/healthz"),
+        new Uri(builder.Configuration["Qdrant:Endpoint"] + "/collections"),
         name: "qdrant");
 
 // ── Response Compression ──────────────────────────────────────
