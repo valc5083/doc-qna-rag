@@ -49,6 +49,7 @@ public class NimService
 
         var response = await _httpClient.SendAsync(request);
         var responseBody = await response.Content.ReadAsStringAsync();
+        _logger.LogError("NIM DEBUG → Status: {Status}, Body: {Body}", response.StatusCode, responseBody);
 
         if (!response.IsSuccessStatusCode)
         {
