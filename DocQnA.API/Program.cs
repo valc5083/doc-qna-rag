@@ -137,9 +137,34 @@ builder.Services.AddHealthChecks()
     .AddNpgSql(
         builder.Configuration.GetConnectionString("DefaultConnection")!,
         name: "postgresql")
-    .AddUrlGroup(
-        new Uri(builder.Configuration["Qdrant:Endpoint"] + "/collections"),
-        name: "qdrant");
+    .AddAsyncCheck("qdrant", async () =>
+    {
+        try
+        {
+            var endpoint = builder.Configuration["Qdrant:Endpoint"]!;
+            var apiKey = builder.Configuration["Qdrant:ApiKey"];
+
+            using var httpClient = new HttpClient();
+
+            if (!string.IsNullOrEmpty(apiKey))
+                httpClient.DefaultRequestHeaders.Add("api-key", apiKey);
+
+            var response = await httpClient.GetAsync(
+                $"{endpoint}/healthz");
+
+            return response.IsSuccessStatusCode
+                ? Microsoft.Extensions.Diagnostics.HealthChecks
+                    .HealthCheckResult.Healthy("Qdrant is reachable")
+                : Microsoft.Extensions.Diagnostics.HealthChecks
+                    .HealthCheckResult.Unhealthy(
+                        $"Qdrant returned {response.StatusCode}");
+        }
+        catch (Exception ex)
+        {
+            return Microsoft.Extensions.Diagnostics.HealthChecks
+                .HealthCheckResult.Unhealthy(ex.Message);
+        }
+    });
 
 // ── Response Compression ──────────────────────────────────────
 builder.Services.AddResponseCompression(opts =>
