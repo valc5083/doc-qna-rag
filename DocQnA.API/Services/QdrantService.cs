@@ -18,21 +18,23 @@ public class QdrantService
         var apiKey = config["Qdrant:ApiKey"];
         var uri = new Uri(endpoint);
 
-        // ← Support both local (no auth) and cloud (with API key)
+        _logger.LogInformation(
+        "Connecting to Qdrant at {Endpoint}, HasApiKey: {HasKey}",
+        endpoint, !string.IsNullOrEmpty(apiKey));
+
         if (!string.IsNullOrEmpty(apiKey))
         {
+            // ← Qdrant Cloud — uses HTTPS port 6333 with API key
             _client = new QdrantClient(
                 host: uri.Host,
-                port: uri.Port,
-                https: uri.Scheme == "https",
+                port: 6333,
+                https: true,
                 apiKey: apiKey);
         }
         else
         {
-            _client = new QdrantClient(
-                host: uri.Host,
-                port: uri.Port == 443 ? 6334 : uri.Port,
-                https: false);
+            // ← Local Docker — uses gRPC port 6334
+            _client = new QdrantClient("localhost", 6334);
         }
     }
 
