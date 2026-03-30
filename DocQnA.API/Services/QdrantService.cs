@@ -36,7 +36,13 @@ public class QdrantService
         else
         {
             // ← Local Docker — uses gRPC port 6334
-            _client = new QdrantClient("localhost", 6334);
+            _client = new QdrantClient
+            (
+                host: uri.Host,
+                port: uri.Port == -1 ? (uri.Scheme == "https" ? 443 : 6333) : uri.Port,
+                https: uri.Scheme == "https",
+                apiKey: apiKey
+            );
         }
     }
 
