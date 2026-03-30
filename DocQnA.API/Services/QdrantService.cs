@@ -1,201 +1,130 @@
-﻿using System.Text;
-using System.Text.Json;
+﻿using Qdrant.Client;
+using Qdrant.Client.Grpc;
 
 namespace DocQnA.API.Services;
 
 public class QdrantService
 {
-    private readonly HttpClient _httpClient;
+    private readonly QdrantClient _client;
     private readonly ILogger<QdrantService> _logger;
     private readonly int _vectorSize;
-    private readonly string _endpoint;
 
     public QdrantService(IConfiguration config, ILogger<QdrantService> logger)
     {
         _logger = logger;
         _vectorSize = config.GetValue<int>("Qdrant:VectorSize", 1024);
 
-        _endpoint = config["Qdrant:Endpoint"]!.TrimEnd('/');
+        var endpoint = config["Qdrant:Endpoint"] ?? "http://localhost:6333";
         var apiKey = config["Qdrant:ApiKey"];
+        var uri = new Uri(endpoint);
 
-        _httpClient = new HttpClient();
+        _logger.LogInformation(
+        "Connecting to Qdrant at {Endpoint}, HasApiKey: {HasKey}",
+        endpoint, !string.IsNullOrEmpty(apiKey));
 
         if (!string.IsNullOrEmpty(apiKey))
         {
-            _httpClient.DefaultRequestHeaders.Add("api-key", apiKey);
+            // ← Qdrant Cloud — uses HTTPS port 6333 with API key
+            _client = new QdrantClient
+            (
+               host: uri.Host,
+                port: uri.Port == -1 ? 443 : uri.Port,
+                https: uri.Scheme == "https",
+                apiKey: apiKey
+            );
         }
-
-        _logger.LogInformation("Using Qdrant REST at {Endpoint}", _endpoint);
+        else
+        {
+            // ← Local Docker — uses gRPC port 6334
+            _client = new QdrantClient
+            (
+                host: uri.Host,
+                port: uri.Port == -1 ? (uri.Scheme == "https" ? 443 : 6333) : uri.Port,
+                https: uri.Scheme == "https",
+                apiKey: apiKey
+            );
+        }
     }
 
-    // ─────────────────────────────────────────────
-    // ✅ Create Collection
-    // ─────────────────────────────────────────────
+    // ── Create Collection ─────────────────────────────────────
     public async Task CreateCollectionAsync(string collectionName)
     {
         var exists = await CollectionExistsAsync(collectionName);
         if (exists)
         {
-            _logger.LogInformation("Collection {Name} already exists", collectionName);
+            _logger.LogInformation(
+                "Collection {Name} already exists", collectionName);
             return;
         }
 
-        var body = new
-        {
-            vectors = new
+        await _client.CreateCollectionAsync(collectionName,
+            new VectorParams
             {
-                size = _vectorSize,
-                distance = "Cosine"
-            }
-        };
+                Size = (ulong)_vectorSize,
+                Distance = Distance.Cosine
+            });
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(body),
-            Encoding.UTF8,
-            "application/json"
-        );
-
-        var response = await _httpClient.PutAsync(
-            $"{_endpoint}/collections/{collectionName}",
-            content
-        );
-
-        response.EnsureSuccessStatusCode();
-
-        _logger.LogInformation("Created collection {Name}", collectionName);
+        _logger.LogInformation(
+            "Created Qdrant collection: {Name}", collectionName);
     }
 
-    // ─────────────────────────────────────────────
-    // ✅ Check Collection Exists
-    // ─────────────────────────────────────────────
-    public async Task<bool> CollectionExistsAsync(string collectionName)
-    {
-        var response = await _httpClient.GetAsync(
-            $"{_endpoint}/collections/{collectionName}"
-        );
-
-        return response.IsSuccessStatusCode;
-    }
-
-    // ─────────────────────────────────────────────
-    // ✅ Upsert Vectors
-    // ─────────────────────────────────────────────
+    // ── Upsert Vectors ────────────────────────────────────────
     public async Task UpsertVectorsAsync(
         string collectionName,
         List<(string Id, List<float> Vector, string Text, int ChunkIndex)> points)
     {
-        var body = new
-        {
-            points = points.Select(p => new
+        var qdrantPoints = points.Select(p =>
+            new PointStruct
             {
-                id = p.Id,
-                vector = p.Vector,
-                payload = new
+                Id = new PointId { Uuid = p.Id },
+                Vectors = p.Vector.ToArray(),
+                Payload =
                 {
-                    text = p.Text,
-                    chunk_index = p.ChunkIndex
+                    ["text"] = p.Text,
+                    ["chunk_index"] = p.ChunkIndex
                 }
-            })
-        };
+            }).ToList();
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(body),
-            Encoding.UTF8,
-            "application/json"
-        );
-
-        var response = await _httpClient.PutAsync(
-            $"{_endpoint}/collections/{collectionName}/points",
-            content
-        );
-
-        response.EnsureSuccessStatusCode();
+        await _client.UpsertAsync(collectionName, qdrantPoints);
 
         _logger.LogInformation(
-            "Upserted {Count} vectors into {Collection}",
-            points.Count,
-            collectionName
-        );
+            "Upserted {Count} vectors to {Name}",
+            points.Count, collectionName);
     }
 
-    // ─────────────────────────────────────────────
-    // ✅ Search
-    // ─────────────────────────────────────────────
-    public async Task<List<string>> SearchAsync(string collectionName, List<float> queryVector, int topK)
+    // ── Search Similar Vectors ────────────────────────────────
+    public async Task<List<(string Text, float Score, int ChunkIndex)>>
+        SearchAsync(string collectionName, List<float> queryVector, int topK = 5)
     {
-        var url = $"{_endpoint}/collections/{collectionName}/points/search";
+        var results = await _client.SearchAsync(
+            collectionName,
+            queryVector.ToArray(),
+            limit: (ulong)topK,
+            scoreThreshold: 0.3f);
 
-        var requestBody = new
-        {
-            vector = queryVector,
-            limit = topK,
-            with_payload = true
-        };
-
-        var response = await _httpClient.PostAsJsonAsync(url, requestBody);
-        response.EnsureSuccessStatusCode();
-
-        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
-
-        var results = new List<string>();
-
-        // ✅ Handle BOTH formats safely
-        if (json.TryGetProperty("result", out var result))
-        {
-            if (result.ValueKind == JsonValueKind.Array)
-            {
-                // Old format
-                foreach (var item in result.EnumerateArray())
-                {
-                    ExtractPayloadText(item, results);
-                }
-            }
-            else if (result.TryGetProperty("points", out var points))
-            {
-                // New format
-                foreach (var item in points.EnumerateArray())
-                {
-                    ExtractPayloadText(item, results);
-                }
-            }
-        }
-
-        return results;
+        return results.Select(r => (
+            Text: r.Payload["text"].StringValue,
+            Score: r.Score,
+            ChunkIndex: (int)r.Payload["chunk_index"].IntegerValue
+        )).ToList();
     }
 
-    private void ExtractPayloadText(JsonElement item, List<string> results)
-    {
-        if (item.TryGetProperty("payload", out var payload))
-        {
-            // 🔥 safest extraction
-            if (payload.TryGetProperty("text", out var text))
-            {
-                results.Add(text.GetString() ?? "");
-            }
-            else if (payload.ValueKind == JsonValueKind.String)
-            {
-                results.Add(payload.GetString() ?? "");
-            }
-            else
-            {
-                // fallback
-                results.Add(payload.ToString());
-            }
-        }
-    }
-
-    // ─────────────────────────────────────────────
-    // ✅ Delete Collection
-    // ─────────────────────────────────────────────
+    // ── Delete Collection ─────────────────────────────────────
     public async Task DeleteCollectionAsync(string collectionName)
     {
-        var response = await _httpClient.DeleteAsync(
-            $"{_endpoint}/collections/{collectionName}"
-        );
+        var exists = await CollectionExistsAsync(collectionName);
+        if (!exists) return;
 
-        if (response.IsSuccessStatusCode)
-        {
-            _logger.LogInformation("Deleted collection {Name}", collectionName);
-        }
+        await _client.DeleteCollectionAsync(collectionName);
+
+        _logger.LogInformation(
+            "Deleted Qdrant collection: {Name}", collectionName);
+    }
+
+    // ── Check Collection Exists ───────────────────────────────
+    public async Task<bool> CollectionExistsAsync(string collectionName)
+    {
+        var collections = await _client.ListCollectionsAsync();
+        return collections.Any(c => c == collectionName);
     }
 }
