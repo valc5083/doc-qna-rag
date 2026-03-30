@@ -65,30 +65,36 @@ namespace DocQnA.API.Services
 
             // ── Trigger ingestion pipeline in background ──────────
             // ── Trigger ingestion in background with its own scope ────
-            var memoryStream = new MemoryStream();
-            await file.CopyToAsync(memoryStream);
-            memoryStream.Position = 0;
+            // ── Save file to disk ─────────────────────────────
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
 
+            if (!Directory.Exists(uploadsFolder))
+                Directory.CreateDirectory(uploadsFolder);
+
+            var filePath = Path.Combine(uploadsFolder, $"{Guid.NewGuid()}_{file.FileName}");
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            // ── Trigger ingestion in background ───────────────
             var docId = document.Id;
+
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    // ← Create a fresh DI scope for the background task
                     using var scope = _scopeFactory.CreateScope();
                     var ingestionService = scope.ServiceProvider
                         .GetRequiredService<IngestionService>();
 
-                    await ingestionService.IngestAsync(docId, memoryStream);
+                    await ingestionService.IngestFromFileAsync(docId, filePath);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex,
                         "Background ingestion failed for document {DocId}", docId);
-                }
-                finally
-                {
-                    await memoryStream.DisposeAsync();
                 }
             });
 

@@ -27,8 +27,15 @@ public class IngestionService
         _logger = logger;
     }
 
+    public async Task IngestFromFileAsync(Guid documentId, string filePath)
+    {
+        using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+        await IngestAsync(documentId, stream);
+    }
+
     public async Task IngestAsync(Guid documentId, Stream pdfStream)
     {
+        _logger.LogInformation("[{DocId}] Stream length: {Length}", documentId, pdfStream.Length);
         var document = await _db.Documents.FindAsync(documentId);
         if (document == null) return;
 
