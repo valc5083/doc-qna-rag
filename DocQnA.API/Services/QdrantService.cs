@@ -121,46 +121,67 @@ public class QdrantService
     // ─────────────────────────────────────────────
     // ✅ Search
     // ─────────────────────────────────────────────
-    public async Task<List<(string Text, float Score, int ChunkIndex)>> SearchAsync(
-        string collectionName,
-        List<float> queryVector,
-        int topK = 5)
+    public async Task<List<string>> SearchAsync(string collectionName, List<float> queryVector, int topK)
     {
-        var body = new
+        var url = $"{_endpoint}/collections/{collectionName}/points/search";
+
+        var requestBody = new
         {
             vector = queryVector,
             limit = topK,
-            score_threshold = 0.3
+            with_payload = true
         };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(body),
-            Encoding.UTF8,
-            "application/json"
-        );
-
-        var response = await _httpClient.PostAsync(
-            $"{_endpoint}/collections/{collectionName}/points/search",
-            content
-        );
-
+        var response = await _httpClient.PostAsJsonAsync(url, requestBody);
         response.EnsureSuccessStatusCode();
 
-        var json = await response.Content.ReadAsStringAsync();
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-        using var doc = JsonDocument.Parse(json);
+        var results = new List<string>();
 
-        var results = doc.RootElement
-            .GetProperty("result")
-            .EnumerateArray()
-            .Select(r => (
-                Text: r.GetProperty("payload").GetProperty("text").GetString()!,
-                Score: r.GetProperty("score").GetSingle(),
-                ChunkIndex: r.GetProperty("payload").GetProperty("chunk_index").GetInt32()
-            ))
-            .ToList();
+        // ✅ Handle BOTH formats safely
+        if (json.TryGetProperty("result", out var result))
+        {
+            if (result.ValueKind == JsonValueKind.Array)
+            {
+                // Old format
+                foreach (var item in result.EnumerateArray())
+                {
+                    ExtractPayloadText(item, results);
+                }
+            }
+            else if (result.TryGetProperty("points", out var points))
+            {
+                // New format
+                foreach (var item in points.EnumerateArray())
+                {
+                    ExtractPayloadText(item, results);
+                }
+            }
+        }
 
         return results;
+    }
+
+    private void ExtractPayloadText(JsonElement item, List<string> results)
+    {
+        if (item.TryGetProperty("payload", out var payload))
+        {
+            // 🔥 safest extraction
+            if (payload.TryGetProperty("text", out var text))
+            {
+                results.Add(text.GetString() ?? "");
+            }
+            else if (payload.ValueKind == JsonValueKind.String)
+            {
+                results.Add(payload.GetString() ?? "");
+            }
+            else
+            {
+                // fallback
+                results.Add(payload.ToString());
+            }
+        }
     }
 
     // ─────────────────────────────────────────────
