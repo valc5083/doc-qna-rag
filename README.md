@@ -162,7 +162,7 @@
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/doc-qna-rag.git
+git clone https://github.com/valc5083/doc-qna-rag.git
 cd doc-qna-rag
 ```
 
@@ -322,55 +322,6 @@ DocQnA/
 ├── docker-compose.yml
 └── README.md
 ```
-
----
-
-## 🔌 API Reference
-
-### Auth
-
-| Method | Endpoint             | Auth | Description               |
-| ------ | -------------------- | ---- | ------------------------- |
-| POST   | `/api/auth/register` | ❌   | Register new user         |
-| POST   | `/api/auth/login`    | ❌   | Login, returns JWT tokens |
-| POST   | `/api/auth/refresh`  | ❌   | Refresh access token      |
-| POST   | `/api/auth/logout`   | ✅   | Invalidate refresh token  |
-
-### Documents
-
-| Method | Endpoint                    | Auth | Description                                |
-| ------ | --------------------------- | ---- | ------------------------------------------ |
-| POST   | `/api/document/upload`      | ✅   | Upload PDF, triggers RAG pipeline          |
-| GET    | `/api/document`             | ✅   | List all user documents                    |
-| GET    | `/api/document/{id}`        | ✅   | Get document by ID                         |
-| GET    | `/api/document/{id}/status` | ✅   | Check ingestion status                     |
-| DELETE | `/api/document/{id}`        | ✅   | Delete doc + Qdrant vectors + chat history |
-
-### Q&A
-
-| Method | Endpoint                | Auth | Description                                 |
-| ------ | ----------------------- | ---- | ------------------------------------------- |
-| POST   | `/api/qna/ask`          | ✅   | Ask question, returns full answer + sources |
-| GET    | `/api/qna/ask-stream`   | ✅   | Streaming answer via SSE (token-by-token)   |
-| GET    | `/api/qna/history`      | ✅   | Get chat history (default last 20)          |
-| DELETE | `/api/qna/history`      | ✅   | Clear all history                           |
-| DELETE | `/api/qna/history/{id}` | ✅   | Delete single conversation                  |
-
-### Collections
-
-| Method | Endpoint                                 | Auth | Description                     |
-| ------ | ---------------------------------------- | ---- | ------------------------------- |
-| GET    | `/api/collection`                        | ✅   | List all collections            |
-| POST   | `/api/collection`                        | ✅   | Create new collection           |
-| POST   | `/api/collection/{id}/documents`         | ✅   | Add document to collection      |
-| DELETE | `/api/collection/{id}/documents/{docId}` | ✅   | Remove document from collection |
-| DELETE | `/api/collection/{id}`                   | ✅   | Delete collection               |
-
-### Health
-
-| Method | Endpoint  | Auth | Description                      |
-| ------ | --------- | ---- | -------------------------------- |
-| GET    | `/health` | ❌   | Check PostgreSQL + Qdrant status |
 
 ---
 
