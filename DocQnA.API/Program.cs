@@ -38,6 +38,7 @@ builder.Services.AddScoped<TextChunkerService>();
 builder.Services.AddScoped<IngestionService>();
 builder.Services.AddScoped<QnAService>();
 builder.Services.AddScoped<CollectionService>();
+builder.Services.AddHttpClient("Qdrant");
 builder.Services.AddSingleton<QdrantService>();
 builder.Services.AddHttpClient("NvidiaNim");
 builder.Services.AddScoped<NimService>();
@@ -137,27 +138,27 @@ builder.Services.AddHealthChecks()
     .AddNpgSql(
         builder.Configuration.GetConnectionString("DefaultConnection")!,
         name: "postgresql")
-    .AddAsyncCheck("qdrant", async () =>
+    .AddAsyncCheck("qdrant", async (ct) =>
     {
         try
         {
-            var endpoint = builder.Configuration["Qdrant:Endpoint"]!;
+            var endpoint = builder.Configuration["Qdrant:Endpoint"]!
+                .TrimEnd('/');
             var apiKey = builder.Configuration["Qdrant:ApiKey"];
 
-            using var httpClient = new HttpClient();
-
+            using var client = new HttpClient();
             if (!string.IsNullOrEmpty(apiKey))
-                httpClient.DefaultRequestHeaders.Add("api-key", apiKey);
+                client.DefaultRequestHeaders.Add("api-key", apiKey);
 
-            var response = await httpClient.GetAsync(
-                $"{endpoint}/healthz");
+            var response = await client.GetAsync(
+                $"{endpoint}/healthz", ct);
 
             return response.IsSuccessStatusCode
                 ? Microsoft.Extensions.Diagnostics.HealthChecks
-                    .HealthCheckResult.Healthy("Qdrant is reachable")
+                    .HealthCheckResult.Healthy()
                 : Microsoft.Extensions.Diagnostics.HealthChecks
                     .HealthCheckResult.Unhealthy(
-                        $"Qdrant returned {response.StatusCode}");
+                        $"Status: {response.StatusCode}");
         }
         catch (Exception ex)
         {

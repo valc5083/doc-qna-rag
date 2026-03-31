@@ -41,7 +41,15 @@ public class QnAServiceTests : IDisposable
             httpClientFactory.Object, config, nimLogger.Object);
 
         var qdrantLogger = new Mock<ILogger<QdrantService>>();
-        var qdrantService = new QdrantService(config, qdrantLogger.Object);
+        httpClientFactory
+            .Setup(f => f.CreateClient(It.IsAny<string>()))
+            .Returns(new HttpClient
+            {
+                BaseAddress = new Uri("http://localhost:6333")
+            });
+
+        var qdrantService = new QdrantService(
+            config, qdrantLogger.Object, httpClientFactory.Object);
 
         var qnaLogger = new Mock<ILogger<QnAService>>();
         _qnAService = new QnAService(
