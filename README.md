@@ -2,7 +2,9 @@
 
 > Ask natural language questions over your uploaded PDF documents using AI — powered by Retrieval-Augmented Generation (RAG).
 
-![Status](https://img.shields.io/badge/Status-Week%203%20Ready-brightgreen)
+![Status](https://img.shields.io/badge/Status-Live%20🟢-brightgreen)
+![Vercel](https://img.shields.io/badge/Frontend-Vercel-black)
+![Render](https://img.shields.io/badge/API-Render-46E3B7)
 ![.NET](https://img.shields.io/badge/.NET-8.0-purple)
 ![React](https://img.shields.io/badge/React-18-61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)
@@ -14,6 +16,7 @@
 ## ✨ Features
 
 ### ✅ Fully Implemented
+
 - 🔐 **JWT Authentication** — Register, login, logout with refresh token rotation and auto-refresh on expiry
 - 📄 **PDF Upload** — Drag and drop with real-time status tracking, non-PDF rejection with clear error messages
 - 🧠 **Full RAG Pipeline** — Extract → Chunk → Embed → Store, fully automated in background
@@ -35,27 +38,50 @@
 ## 🖼️ Screenshots
 
 ### Login
+
 ![Login Page](./screenshots/login.png)
 
 ### Register
+
 ![Register Page](./screenshots/register.png)
 
 ### Dashboard — Document Upload & Management
+
 ![Dashboard](./screenshots/dashboard.png)
 
 ### Chat — AI Q&A with Streaming + Source Attribution
+
 ![Chat](./screenshots/chat.png)
 
 ### Chat — AI History
+
 ![Chat](./screenshots/chathistory.png)
 
 ### Chat History with Stats
+
 ![History](./screenshots/history.png)
 
 ### Collections Management
+
 ![Collections](./screenshots/collections.png)
 
+### Admin Dashboard
+
+![Admin](./screenshots/admin.png)
+
 ---
+
+## 🌐 Live Demo
+
+|                     | URL                                                                             |
+| ------------------- | ------------------------------------------------------------------------------- |
+| 🎨 **Frontend**     | [doc-qna-rag-v2pu.vercel.app](https://doc-qna-rag-v2pu.vercel.app/login)        |
+| 🔧 **API Swagger**  | [docqna-api.onrender.com/swagger](https://docqna-api.onrender.com/swagger)      |
+| 🏥 **Health Check** | [docqna-api.onrender.com/health](https://docqna-api.onrender.com/health)        |
+| 🌐 **Demo Video**   | [Recorded Session](https://www.loom.com/share/19e3124276734b27af26eb27f19dacf7) |
+
+> ⚠️ Render free tier spins down after 15 minutes of inactivity.
+> First request may take ~30 seconds to wake up.
 
 ## 🏗️ Architecture
 
@@ -92,27 +118,27 @@
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology | Purpose |
-|---|---|---|
-| Frontend | React 18 + TypeScript | UI framework |
-| Styling | MUI `styled()` utility | Component styling — no inline sx |
-| State | Zustand | Global auth state |
-| HTTP | Axios + interceptors | API calls, 401 auto-refresh |
-| Notifications | react-hot-toast | User feedback toasts |
-| Markdown | react-markdown | Render LLM markdown answers |
-| Backend | ASP.NET Core 8 Web API | REST + SSE API |
-| Auth | JWT Bearer + BCrypt | Secure authentication |
-| Validation | FluentValidation | Request validation |
-| ORM | EF Core 8 + PostgreSQL | Relational data storage |
-| PDF Parsing | PdfPig | Text extraction from PDFs |
-| Chunking | Custom sliding window | 2000-char chunks, 200-char overlap |
-| Embeddings | NVIDIA NIM (`nvidia/nv-embedqa-e5-v5`) | 1024-dim vector embeddings |
-| LLM | NVIDIA NIM (`meta/llama-4-maverick-17b-128e-instruct`) | Answer generation |
-| Streaming | Server-Sent Events (SSE) | Token-by-token streaming |
-| Vector DB | Qdrant (gRPC port 6334) | Cosine similarity search |
-| Logging | Serilog | Structured request logging |
-| Health | ASP.NET Health Checks | PostgreSQL + Qdrant monitoring |
-| Infrastructure | Docker + Docker Compose | PostgreSQL + Qdrant containers |
+| Layer          | Technology                                             | Purpose                            |
+| -------------- | ------------------------------------------------------ | ---------------------------------- |
+| Frontend       | React 18 + TypeScript                                  | UI framework                       |
+| Styling        | MUI `styled()` utility                                 | Component styling — no inline sx   |
+| State          | Zustand                                                | Global auth state                  |
+| HTTP           | Axios + interceptors                                   | API calls, 401 auto-refresh        |
+| Notifications  | react-hot-toast                                        | User feedback toasts               |
+| Markdown       | react-markdown                                         | Render LLM markdown answers        |
+| Backend        | ASP.NET Core 8 Web API                                 | REST + SSE API                     |
+| Auth           | JWT Bearer + BCrypt                                    | Secure authentication              |
+| Validation     | FluentValidation                                       | Request validation                 |
+| ORM            | EF Core 8 + PostgreSQL                                 | Relational data storage            |
+| PDF Parsing    | PdfPig                                                 | Text extraction from PDFs          |
+| Chunking       | Custom sliding window                                  | 2000-char chunks, 200-char overlap |
+| Embeddings     | NVIDIA NIM (`nvidia/nv-embedqa-e5-v5`)                 | 1024-dim vector embeddings         |
+| LLM            | NVIDIA NIM (`meta/llama-4-maverick-17b-128e-instruct`) | Answer generation                  |
+| Streaming      | Server-Sent Events (SSE)                               | Token-by-token streaming           |
+| Vector DB      | Qdrant (gRPC port 6334)                                | Cosine similarity search           |
+| Logging        | Serilog                                                | Structured request logging         |
+| Health         | ASP.NET Health Checks                                  | PostgreSQL + Qdrant monitoring     |
+| Infrastructure | Docker + Docker Compose                                | PostgreSQL + Qdrant containers     |
 
 ---
 
@@ -120,13 +146,13 @@
 
 ### Prerequisites
 
-| Tool | Version | Download |
-|---|---|---|
-| Node.js | 20 LTS | [nodejs.org](https://nodejs.org) |
-| .NET SDK | 8.0 | [dot.net](https://dot.net) |
-| Docker Desktop | Latest | [docker.com](https://docker.com/products/docker-desktop) |
-| Git | Latest | [git-scm.com](https://git-scm.com) |
-| NVIDIA NIM API Key | — | [build.nvidia.com](https://build.nvidia.com) |
+| Tool               | Version | Download                                                 |
+| ------------------ | ------- | -------------------------------------------------------- |
+| Node.js            | 20 LTS  | [nodejs.org](https://nodejs.org)                         |
+| .NET SDK           | 8.0     | [dot.net](https://dot.net)                               |
+| Docker Desktop     | Latest  | [docker.com](https://docker.com/products/docker-desktop) |
+| Git                | Latest  | [git-scm.com](https://git-scm.com)                       |
+| NVIDIA NIM API Key | —       | [build.nvidia.com](https://build.nvidia.com)             |
 
 ---
 
@@ -143,9 +169,9 @@ cd doc-qna-rag
 docker-compose up -d
 ```
 
-| Service | Port | Dashboard |
-|---|---|---|
-| PostgreSQL 16 | 5432 | Connect via DBeaver |
+| Service          | Port                     | Dashboard                       |
+| ---------------- | ------------------------ | ------------------------------- |
+| PostgreSQL 16    | 5432                     | Connect via DBeaver             |
 | Qdrant Vector DB | 6333 (REST), 6334 (gRPC) | http://localhost:6333/dashboard |
 
 ### 3. Configure the Backend
@@ -299,50 +325,56 @@ DocQnA/
 ## 🔌 API Reference
 
 ### Auth
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| POST | `/api/auth/register` | ❌ | Register new user |
-| POST | `/api/auth/login` | ❌ | Login, returns JWT tokens |
-| POST | `/api/auth/refresh` | ❌ | Refresh access token |
-| POST | `/api/auth/logout` | ✅ | Invalidate refresh token |
+
+| Method | Endpoint             | Auth | Description               |
+| ------ | -------------------- | ---- | ------------------------- |
+| POST   | `/api/auth/register` | ❌   | Register new user         |
+| POST   | `/api/auth/login`    | ❌   | Login, returns JWT tokens |
+| POST   | `/api/auth/refresh`  | ❌   | Refresh access token      |
+| POST   | `/api/auth/logout`   | ✅   | Invalidate refresh token  |
 
 ### Documents
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| POST | `/api/document/upload` | ✅ | Upload PDF, triggers RAG pipeline |
-| GET | `/api/document` | ✅ | List all user documents |
-| GET | `/api/document/{id}` | ✅ | Get document by ID |
-| GET | `/api/document/{id}/status` | ✅ | Check ingestion status |
-| DELETE | `/api/document/{id}` | ✅ | Delete doc + Qdrant vectors + chat history |
+
+| Method | Endpoint                    | Auth | Description                                |
+| ------ | --------------------------- | ---- | ------------------------------------------ |
+| POST   | `/api/document/upload`      | ✅   | Upload PDF, triggers RAG pipeline          |
+| GET    | `/api/document`             | ✅   | List all user documents                    |
+| GET    | `/api/document/{id}`        | ✅   | Get document by ID                         |
+| GET    | `/api/document/{id}/status` | ✅   | Check ingestion status                     |
+| DELETE | `/api/document/{id}`        | ✅   | Delete doc + Qdrant vectors + chat history |
 
 ### Q&A
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| POST | `/api/qna/ask` | ✅ | Ask question, returns full answer + sources |
-| GET | `/api/qna/ask-stream` | ✅ | Streaming answer via SSE (token-by-token) |
-| GET | `/api/qna/history` | ✅ | Get chat history (default last 20) |
-| DELETE | `/api/qna/history` | ✅ | Clear all history |
-| DELETE | `/api/qna/history/{id}` | ✅ | Delete single conversation |
+
+| Method | Endpoint                | Auth | Description                                 |
+| ------ | ----------------------- | ---- | ------------------------------------------- |
+| POST   | `/api/qna/ask`          | ✅   | Ask question, returns full answer + sources |
+| GET    | `/api/qna/ask-stream`   | ✅   | Streaming answer via SSE (token-by-token)   |
+| GET    | `/api/qna/history`      | ✅   | Get chat history (default last 20)          |
+| DELETE | `/api/qna/history`      | ✅   | Clear all history                           |
+| DELETE | `/api/qna/history/{id}` | ✅   | Delete single conversation                  |
 
 ### Collections
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| GET | `/api/collection` | ✅ | List all collections |
-| POST | `/api/collection` | ✅ | Create new collection |
-| POST | `/api/collection/{id}/documents` | ✅ | Add document to collection |
-| DELETE | `/api/collection/{id}/documents/{docId}` | ✅ | Remove document from collection |
-| DELETE | `/api/collection/{id}` | ✅ | Delete collection |
+
+| Method | Endpoint                                 | Auth | Description                     |
+| ------ | ---------------------------------------- | ---- | ------------------------------- |
+| GET    | `/api/collection`                        | ✅   | List all collections            |
+| POST   | `/api/collection`                        | ✅   | Create new collection           |
+| POST   | `/api/collection/{id}/documents`         | ✅   | Add document to collection      |
+| DELETE | `/api/collection/{id}/documents/{docId}` | ✅   | Remove document from collection |
+| DELETE | `/api/collection/{id}`                   | ✅   | Delete collection               |
 
 ### Health
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| GET | `/health` | ❌ | Check PostgreSQL + Qdrant status |
+
+| Method | Endpoint  | Auth | Description                      |
+| ------ | --------- | ---- | -------------------------------- |
+| GET    | `/health` | ❌   | Check PostgreSQL + Qdrant status |
 
 ---
 
 ## 🧠 RAG Pipeline
 
 ### Ingestion (runs in background after PDF upload)
+
 ```
 1. EXTRACT   PdfPig reads all pages → raw text
 2. CHUNK     Sliding window → 2000-char chunks, 200-char overlap
@@ -352,6 +384,7 @@ DocQnA/
 ```
 
 ### Query (streaming via SSE)
+
 ```
 1. EMBED     Question → NVIDIA NIM → 1024-dim vector
 2. SEARCH    Cosine similarity in Qdrant → top 5 chunks (score threshold: 0.3)
@@ -361,42 +394,6 @@ DocQnA/
 6. DISPLAY   Frontend renders tokens live with blinking cursor
 7. SAVE      Full Q&A saved to ChatMessages table
 ```
-
----
-
-## 📅 Development Progress
-
-### ✅ Week 1 — Backend Foundation + Auth UI + Upload UI
-
-| Day | Task | Status |
-|---|---|---|
-| Day 1 | Project setup, Docker, EF Core, PostgreSQL | ✅ Done |
-| Day 2 | JWT Auth API (Register, Login, Refresh, Logout) | ✅ Done |
-| Bonus | React Auth UI — Login + Register with MUI styled() | ✅ Done |
-| Day 3 | Document upload endpoint with JWT protection | ✅ Done |
-| Day 4 | PDF text extraction + semantic sliding window chunking | ✅ Done |
-| Day 5 | NVIDIA NIM embeddings + Qdrant vector storage | ✅ Done |
-| Bonus | React Dashboard — drag & drop upload + document list + status polling | ✅ Done |
-
-### ✅ Week 2 — Full Q&A Pipeline + All Features
-
-| Day | Task | Status |
-|---|---|---|
-| Day 1 | Q&A service + Qdrant vector search + ChatMessage model | ✅ Done |
-| Day 2 | SSE streaming endpoint + React typewriter chat UI + source viewer | ✅ Done |
-| Day 3 | Chat history page with stats + sidebar + individual delete | ✅ Done |
-| Day 4 | Collections management (full CRUD) + Qdrant cleanup on delete + toasts | ✅ Done |
-| Day 5 | ExceptionMiddleware + FluentValidation + health checks + skeletons + 401 interceptor + mobile responsive | ✅ Done |
-| Fixes | Non-PDF toast error, navigate(-1) back, nav button styles, individual history delete | ✅ Done |
-
-### 🔲 Week 3 — Testing + Deployment
-
-| Day | Task | Status |
-|---|---|---|
-| Day 1-2 | Unit tests (xUnit backend + Vitest frontend) | 🔲 Pending |
-| Day 3 | Deploy frontend to Vercel | 🔲 Pending |
-| Day 4 | Deploy API to Railway | 🔲 Pending |
-| Day 5 | Portfolio write-up + LinkedIn post + demo video | 🔲 Pending |
 
 ---
 
@@ -422,24 +419,24 @@ docker logs docqna_postgres
 docker logs docqna_qdrant
 ```
 
-| Service | Port | Notes |
-|---|---|---|
-| PostgreSQL 16 | 5432 | User data, documents, chat history, collections |
-| Qdrant | 6333 (REST), 6334 (gRPC) | Vector embeddings, one collection per document |
+| Service       | Port                     | Notes                                           |
+| ------------- | ------------------------ | ----------------------------------------------- |
+| PostgreSQL 16 | 5432                     | User data, documents, chat history, collections |
+| Qdrant        | 6333 (REST), 6334 (gRPC) | Vector embeddings, one collection per document  |
 
 ---
 
 ## 💰 Running Cost: $0
 
-| Service | Cost |
-|---|---|
+| Service                                    | Cost      |
+| ------------------------------------------ | --------- |
 | NVIDIA NIM Embeddings (`nv-embedqa-e5-v5`) | Free tier |
-| NVIDIA NIM LLM (`llama-4-maverick`) | Free tier |
-| Qdrant (self-hosted Docker) | Free |
-| PostgreSQL (self-hosted Docker) | Free |
-| Vercel (frontend hosting) | Free |
-| Railway (API hosting) | Free tier |
-| **Total** | **$0** |
+| NVIDIA NIM LLM (`llama-4-maverick`)        | Free tier |
+| Qdrant (self-hosted Docker)                | Free      |
+| PostgreSQL (self-hosted Docker)            | Free      |
+| Vercel (frontend hosting)                  | Free      |
+| Railway (API hosting)                      | Free tier |
+| **Total**                                  | **$0**    |
 
 ---
 
