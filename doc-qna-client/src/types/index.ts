@@ -90,3 +90,47 @@ export interface CreateCollectionRequest {
   description: string;
   name: string;
 }
+
+export interface AdminStats {
+  failedDocuments: number;
+  processingDocuments: number;
+  readyDocuments: number;
+  serverTime: string;
+  totalCollections: number;
+  totalConversations: number;
+  totalDocuments: number;
+  totalStorageBytes: number;
+  totalUsers: number;
+}
+
+export interface AdminUser {
+  collectionCount: number;
+  conversationCount: number;
+  createdAt: string;
+  documentCount: number;
+  email: string;
+  id: string;
+  lastActive: string | null;
+  totalStorageBytes: number;
+}
+
+export interface AdminDocument {
+  chunkCount: number;
+  createdAt: string;
+  fileSizeBytes: number;
+  id: string;
+  originalFileName: string;
+  status: string;
+  userEmail: string;
+  userId: string;
+}
+
+export interface AdminConversation {
+  answer: string;
+  createdAt: string;
+  documentName: string | null;
+  id: string;
+  question: string;
+  sourceCount: number;
+  userEmail: string;
+}

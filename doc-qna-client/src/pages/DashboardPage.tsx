@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Box } from "@mui/material";
-import { History, Folder } from "@mui/icons-material";
+import { History, Folder, AdminPanelSettings } from "@mui/icons-material";
 import { useAuthStore } from "../store/authStore";
 import { authApi } from "../api/authApi";
 import { documentApi } from "../api/documentApi";
@@ -25,8 +25,9 @@ import usePageTitle from "../hooks/usePageTitle";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
-  usePageTitle('Dashboard');
+  usePageTitle("Dashboard");
   const { email, logout } = useAuthStore();
+  const isAdmin = email === "aviguptavalc5083@gmail.com";
   const [documents, setDocuments] = useState<DocumentListResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -87,6 +88,22 @@ const DashboardPage = () => {
         <NavTitle>🤖 DocQnA</NavTitle>
         <Box display="flex" alignItems="center" gap={2}>
           <NavEmail>{email}</NavEmail>
+          {isAdmin && (
+            <NavCollectionButton
+              variant="outlined"
+              startIcon={<AdminPanelSettings />}
+              onClick={() => navigate("/admin")}
+              sx={{
+                background: "rgba(0, 38, 253, 0.96)",
+                borderColor: "rgba(255, 255, 255, 0.93)",
+                "&:hover": {
+                  background: "rgba(93, 103, 255, 0.3)",
+                },
+              }}
+            >
+              Admin
+            </NavCollectionButton>
+          )}
           <NavCollectionButton
             variant="outlined"
             startIcon={<Folder />}

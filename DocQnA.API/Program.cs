@@ -42,6 +42,7 @@ builder.Services.AddHttpClient("Qdrant");
 builder.Services.AddSingleton<QdrantService>();
 builder.Services.AddHttpClient("NvidiaNim");
 builder.Services.AddScoped<NimService>();
+builder.Services.AddScoped<AdminService>();
 
 // ── FluentValidation ──────────────────────────────────────────
 builder.Services.AddFluentValidationAutoValidation();

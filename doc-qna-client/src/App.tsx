@@ -7,6 +7,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import HistoryPage from "./pages/HistoryPage";
 import CollectionsPage from "./pages/CollectionPage";
+import AdminPage from "./pages/AdminPage";
 
 function App() {
   return (
@@ -51,6 +52,17 @@ function App() {
             <ProtectedRoute>
               <ErrorBoundary>
                 <CollectionsPage />
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                <AdminPage />
               </ErrorBoundary>
             </ProtectedRoute>
           }

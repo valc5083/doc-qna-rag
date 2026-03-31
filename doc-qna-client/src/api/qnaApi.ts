@@ -63,6 +63,7 @@ export const qnaApi = {
     eventSource.addEventListener("error", (e) => {
       const msg = (e as MessageEvent).data || "Connection error";
       onError(msg);
+      toast.error(msg);
       eventSource.close();
     });
 
