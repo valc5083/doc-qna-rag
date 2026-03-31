@@ -10,6 +10,9 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)
 ![MUI](https://img.shields.io/badge/MUI-5.x-007FFF)
 ![License](https://img.shields.io/badge/License-MIT-green)
+![CI](https://github.com/valc5083/doc-qna-rag/actions/workflows/ci.yml/badge.svg)
+![Tests](https://img.shields.io/badge/Tests-37%20passing-brightgreen)
+![Docker](https://img.shields.io/badge/Docker-ready-2496ED)
 
 ---
 
