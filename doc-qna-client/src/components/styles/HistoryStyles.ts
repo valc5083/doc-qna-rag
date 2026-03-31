@@ -133,3 +133,39 @@ export const StatLabel = styled(Typography)({
   fontSize: "0.8rem",
   color: "#888888",
 });
+
+// ── Answer Source Badges ──────────────────────────────────────
+export const AnswerSourceBadge = styled(Box)({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  padding: "3px 8px",
+  borderRadius: "10px",
+  fontSize: "0.7rem",
+  fontWeight: 600,
+});
+
+export const DocumentSourceBadge = styled(AnswerSourceBadge)({
+  backgroundColor: "#e8f5e9",
+  color: "#2e7d32",
+  border: "1px solid #81c784",
+});
+
+export const AISourceBadge = styled(AnswerSourceBadge)({
+  backgroundColor: "#fff4e5",
+  color: "#e65100",
+  border: "1px solid #ffb74d",
+});
+
+// ── Answer Text Variants ──────────────────────────────────────
+export const AnswerTextDocument = styled(AnswerText)({
+  borderLeft: "3px solid #2e7d32",
+  paddingLeft: 16,
+  backgroundColor: "#f1f8f4",
+});
+
+export const AnswerTextAI = styled(AnswerText)({
+  borderLeft: "3px solid #ed6c02",
+  paddingLeft: 16,
+  backgroundColor: "#fff4e5",
+});

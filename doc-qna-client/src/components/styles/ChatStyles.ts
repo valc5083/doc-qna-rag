@@ -121,6 +121,116 @@ export const SourceScore = styled(Typography)({
   marginTop: 4,
 });
 
+// ── AI Fallback Warning ───────────────────────────────────────
+export const FallbackWarning = styled(Box)({
+  marginBottom: 12,
+  padding: "12px 16px",
+  backgroundColor: "#fff4e5",
+  borderLeft: "4px solid #ed6c02",
+  borderRadius: "8px",
+  display: "flex",
+  flexDirection: "column",
+  gap: 4,
+});
+
+export const FallbackWarningTitle = styled(Typography)({
+  fontWeight: 600,
+  fontSize: "0.9rem",
+  color: "#e65100",
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+});
+
+export const FallbackWarningText = styled(Typography)({
+  fontSize: "0.85rem",
+  color: "#663c00",
+  lineHeight: 1.4,
+});
+
+export const FallbackReasonText = styled(Typography)({
+  fontSize: "0.75rem",
+  color: "#663c00",
+  opacity: 0.8,
+  marginTop: 4,
+});
+
+// ── Answer Source Badge ───────────────────────────────────────
+export const AnswerSourceBadge = styled(Box)({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  padding: "4px 10px",
+  borderRadius: "12px",
+  fontSize: "0.75rem",
+  fontWeight: 600,
+  marginBottom: 8,
+});
+
+export const DocumentSourceBadge = styled(AnswerSourceBadge)({
+  backgroundColor: "#e8f5e9",
+  color: "#2e7d32",
+  border: "1px solid #81c784",
+});
+
+export const AISourceBadge = styled(AnswerSourceBadge)({
+  backgroundColor: "#fff4e5",
+  color: "#e65100",
+  border: "1px solid #ffb74d",
+});
+
+// ── Answer Container Wrapper ──────────────────────────────────
+export const AnswerContainer = styled(Box)({
+  alignSelf: "flex-start",
+  width: "100%",
+  maxWidth: "75%",
+  
+  '@media (max-width: 600px)': {
+    maxWidth: '92%',
+  },
+});
+
+// ── Assistant Bubble Variants ─────────────────────────────────
+export const AssistantBubbleDocument = styled(Paper)({
+  borderRadius: "18px 18px 18px 4px",
+  padding: "16px 20px",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+  background: "#ffffff",
+  borderLeft: "4px solid #2e7d32",
+});
+
+export const AssistantBubbleAI = styled(Paper)({
+  borderRadius: "18px 18px 18px 4px",
+  padding: "16px 20px",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+  background: "#fff4e5",
+  borderLeft: "4px solid #ed6c02",
+});
+
+export const MarkdownContent = styled(Box)({
+  fontSize: "0.95rem",
+  lineHeight: 1.6,
+  color: "inherit",
+  "& p": {
+    margin: 0,
+  },
+  "& p + p": {
+    marginTop: 8,
+  },
+  "& ol, & ul": {
+    listStylePosition: "inside",
+    paddingLeft: 0,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  "& li": {
+    marginBottom: 4,
+  },
+  "& li:last-child": {
+    marginBottom: 0,
+  },
+});
+
 // ── Thinking Indicator ────────────────────────────────────────
 export const ThinkingBubble = styled(Paper)({
   alignSelf: "flex-start",

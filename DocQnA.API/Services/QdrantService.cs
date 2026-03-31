@@ -113,13 +113,14 @@ public class QdrantService
         SearchAsync(
             string collectionName,
             List<float> queryVector,
-            int topK = 5)
+            int topK = 5,
+            float scoreThreshold = 0.15f)
     {
         var payload = new
         {
             vector = queryVector,
             limit = topK,
-            score_threshold = 0.3f,
+            score_threshold = scoreThreshold,
             with_payload = true
         };
 

@@ -79,8 +79,8 @@ public class NimService
                 new { role = "system", content = systemPrompt },
                 new { role = "user", content = userMessage }
             },
-            temperature = 0.2,
-            max_tokens = 1024
+            temperature = 0.3,
+            max_tokens = 2048
         };
 
         var request = new HttpRequestMessage(
@@ -126,8 +126,8 @@ public class NimService
                 new { role = "system", content = systemPrompt },
                 new { role = "user", content = userMessage }
             },
-            temperature = 0.2,
-            max_tokens = 1024,
+            temperature = 0.3,
+            max_tokens = 2048,
             stream = true
         };
 

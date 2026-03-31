@@ -18,6 +18,8 @@ import {
   Delete,
   ArrowBack,
   Chat,
+  Warning,
+  CheckCircle,
 } from "@mui/icons-material";
 import ReactMarkdown from "react-markdown";
 import { qnaApi } from "../api/qnaApi";
@@ -38,7 +40,8 @@ import {
   HistoryCardHeader,
   HistoryCardBody,
   QuestionText,
-  AnswerText,
+  AnswerTextDocument,
+  AnswerTextAI,
   MetaRow,
   MetaText,
   DocBadge,
@@ -48,6 +51,8 @@ import {
   StatCard,
   StatNumber,
   StatLabel,
+  DocumentSourceBadge,
+  AISourceBadge,
 } from "../components/styles/HistoryStyles";
 import ConfirmationDialog from "../components/ConfirmationDialog";
 import { HistoryListSkeleton } from "../components/skeletons/HistorySkeletons";
@@ -307,28 +312,61 @@ const HistoryPage = () => {
                   {item.question}
                 </QuestionText>
 
+                {/* Answer Source Badge */}
+                <Box sx={{ display: 'flex', gap: 1, mb: 1, mt: 1 }}>
+                  {item.answerSource === 'ai_fallback' ? (
+                    <AISourceBadge>
+                      <Warning sx={{ fontSize: 12 }} />
+                      AI General Knowledge
+                    </AISourceBadge>
+                  ) : (
+                    <DocumentSourceBadge>
+                      <CheckCircle sx={{ fontSize: 12 }} />
+                      From Document
+                    </DocumentSourceBadge>
+                  )}
+                </Box>
+
                 {/* Answer preview or full */}
                 <Collapse in={expandedId === item.id} collapsedSize={72}>
-                  <AnswerText
-                    sx={{
-                      maxHeight: expandedId === item.id ? "none" : 72,
-                      overflow: expandedId === item.id ? "visible" : "hidden",
-                    }}
-                  >
-                    <Box
+                  {item.answerSource === 'ai_fallback' ? (
+                    <AnswerTextAI
                       sx={{
-                        "& p": { margin: 0 },
-                        "& p + p": { marginTop: 1 },
+                        maxHeight: expandedId === item.id ? "none" : 72,
+                        overflow: expandedId === item.id ? "visible" : "hidden",
                       }}
                     >
-                      <ReactMarkdown>{item.answer}</ReactMarkdown>
-                    </Box>
-                  </AnswerText>
+                      <Box
+                        sx={{
+                          "& p": { margin: 0 },
+                          "& p + p": { marginTop: 1 },
+                        }}
+                      >
+                        <ReactMarkdown>{item.answer}</ReactMarkdown>
+                      </Box>
+                    </AnswerTextAI>
+                  ) : (
+                    <AnswerTextDocument
+                      sx={{
+                        maxHeight: expandedId === item.id ? "none" : 72,
+                        overflow: expandedId === item.id ? "visible" : "hidden",
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          "& p": { margin: 0 },
+                          "& p + p": { marginTop: 1 },
+                        }}
+                      >
+                        <ReactMarkdown>{item.answer}</ReactMarkdown>
+                      </Box>
+                    </AnswerTextDocument>
+                  )}
                 </Collapse>
 
                 {/* Meta info */}
                 <MetaRow sx={{ mt: 1.5 }}>
-                  {item.sources && item.sources.length > 0 && (
+                  {item.answerSource === 'document' && item.sources && item.sources.length > 0 && (
                     <MetaText>
                       📎 {item.sources.length} source
                       {item.sources.length > 1 ? "s" : ""} used

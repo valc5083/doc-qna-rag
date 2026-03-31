@@ -19,6 +19,8 @@ public class AskResponse
     public List<SourceChunk> Sources { get; set; } = new();
     public string Question { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+    public string AnswerSource { get; set; } = "document"; // "document" or "ai_fallback"
+    public string? FallbackReason { get; set; } // Why fallback was used
 }
 
 public class ChatHistoryResponse
@@ -30,4 +32,6 @@ public class ChatHistoryResponse
     public Guid? DocumentId { get; set; }
     public string? DocumentName { get; set; }
     public DateTime CreatedAt { get; set; }
+    public string AnswerSource { get; set; } = "document"; // "document" or "ai_fallback"
+    public string? FallbackReason { get; set; }
 }

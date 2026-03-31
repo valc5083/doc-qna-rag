@@ -55,7 +55,8 @@ public class QnAService
         var searchResults = await _qdrantService.SearchAsync(
             document.QdrantCollectionName,
             questionVector,
-            topK: 5);
+            topK: 12,
+            scoreThreshold: 0.15f);
 
         if (searchResults.Count == 0)
         {
@@ -68,46 +69,103 @@ public class QnAService
             };
         }
 
-        // ── Step 4: Build context + prompt ────────────────────
-        var context = string.Join("\n\n---\n\n",
-            searchResults.Select((r, i) =>
-                $"[Source {i + 1}]\n{r.Text}"));
+        // ── Step 4: Re-rank and filter results ────────────────
+        var rerankedResults = ReRankResults(searchResults, request.Question)
+            .Take(8)
+            .ToList();
 
-        var systemPrompt = """
-            You are a helpful document assistant. 
-            Answer the user's question based ONLY on the provided context.
-            If the answer is not in the context, say "I don't have enough information in this document to answer that."
-            Be concise, accurate, and cite which source you used when possible.
-            """;
-
-        var userMessage = $"""
-            Context:
-            {context}
-
-            Question: {request.Question}
-            """;
-
-        // ── Step 5: Get answer from LLM ───────────────────────
-        _logger.LogInformation("Sending to NVIDIA NIM LLM...");
-        var answer = await _nimService
-            .GetChatCompletionAsync(systemPrompt, userMessage);
-
-        // ── Step 6: Build source chunks ───────────────────────
-        var sources = searchResults.Select(r => new SourceChunk
+        // ── Step 4.5: Determine if we need AI fallback ────────
+        var useAiFallback = false;
+        var fallbackReason = "";
+        
+        // Check if we have insufficient relevant results
+        if (rerankedResults.Count == 0)
         {
-            Text = r.Text,
-            Score = r.Score,
-            ChunkIndex = r.ChunkIndex
-        }).ToList();
+            useAiFallback = true;
+            fallbackReason = "No relevant information found in document";
+        }
+        else if (rerankedResults.Count < 3 && rerankedResults.Max(r => r.Score) < 0.35f)
+        {
+            useAiFallback = true;
+            fallbackReason = "Low confidence in document matches";
+        }
 
-        // ── Step 7: Save to chat history ──────────────────────
+        string answer;
+        List<SourceChunk> sources;
+
+        if (useAiFallback)
+        {
+            // ── AI Fallback Path ───────────────────────────────
+            _logger.LogInformation(
+                "Using AI fallback for question: {Question}, Reason: {Reason}",
+                request.Question, fallbackReason);
+
+            var aiFallbackPrompt = $"""
+                You are a knowledgeable AI assistant. The user has uploaded a document titled "{document.OriginalFileName}" and is asking a question.
+                
+                The document does not contain sufficient information to answer this question: "{request.Question}"
+                
+                Please provide a helpful answer based on your general knowledge. Be informative and accurate.
+                
+                Important:
+                1. Start with: "⚠️ This answer is from AI general knowledge (not found in your document)"
+                2. Provide a comprehensive answer to the question
+                3. If relevant, suggest how this might relate to the document topic
+                4. Keep your response clear and concise
+                """;
+
+            answer = await _nimService.GetChatCompletionAsync(
+                "You are a helpful AI assistant providing general knowledge answers.",
+                aiFallbackPrompt);
+
+            sources = new List<SourceChunk>();
+        }
+        else
+        {
+            // ── Document-Based Answer Path (Original) ─────────
+            var context = string.Join("\n\n---\n\n",
+                rerankedResults.Select((r, i) =>
+                    $"[Source {i + 1}]\n{r.Text}"));
+
+            var systemPrompt = """
+                You are an expert document assistant. Your task is to provide comprehensive, accurate answers based on the provided context.
+                
+                Instructions:
+                1. Carefully analyze ALL provided sources to extract relevant information
+                2. Synthesize information from multiple sources when applicable
+                3. Provide detailed answers when the context supports it
+                4. If information is partially available, provide what you can and note what's missing
+                5. Only say you don't have enough information if the context is completely unrelated to the question
+                6. When citing sources, mention which source number(s) you used
+                7. Be thorough but concise - prioritize completeness over brevity
+                """;
+
+            var userMessage = $"""
+                Context:
+                {context}
+
+                Question: {request.Question}
+                """;
+
+            answer = await _nimService.GetChatCompletionAsync(systemPrompt, userMessage);
+            sources = rerankedResults.Select(r => new SourceChunk
+            {
+                Text = r.Text,
+                Score = r.Score,
+                ChunkIndex = r.ChunkIndex
+            }).ToList();
+        }
+
+        // ── Step 8: Save to chat history ──────────────────────
         var chatMessage = new ChatMessage
         {
             UserId = userId,
             DocumentId = document.Id,
             Question = request.Question,
             Answer = answer,
-            SourceChunks = JsonSerializer.Serialize(sources)
+            SourceChunks = JsonSerializer.Serialize(sources),
+            AnswerSource = useAiFallback ? "ai_fallback" : "document",
+            FallbackReason = useAiFallback ? fallbackReason : null
         };
 
         _db.ChatMessages.Add(chatMessage);
@@ -122,7 +180,9 @@ public class QnAService
             Question = request.Question,
             Answer = answer,
             Sources = sources,
-            CreatedAt = chatMessage.CreatedAt
+            CreatedAt = chatMessage.CreatedAt,
+            AnswerSource = useAiFallback ? "ai_fallback" : "document",
+            FallbackReason = useAiFallback ? fallbackReason : null
         };
     }
 
@@ -165,7 +225,8 @@ public class QnAService
             var searchResults = await _qdrantService.SearchAsync(
                 document.QdrantCollectionName,
                 questionVector,
-                topK: 5);
+                topK: 12,
+                scoreThreshold: 0.15f);
 
             if (searchResults.Count == 0)
             {
@@ -175,8 +236,38 @@ public class QnAService
                 return;
             }
 
-            // ── Step 4: Send sources first ─────────────────────────
-            var sources = searchResults.Select(r => new SourceChunk
+            // ── Step 4: Re-rank results ────────────────────────────
+            var rerankedResults = ReRankResults(searchResults, question)
+                .Take(8)
+                .ToList();
+
+            // ── Step 4.5: Determine if we need AI fallback ────────
+            var useAiFallback = false;
+            var fallbackReason = "";
+            
+            if (rerankedResults.Count == 0)
+            {
+                useAiFallback = true;
+                fallbackReason = "No relevant information found in document";
+            }
+            else if (rerankedResults.Count < 3 && rerankedResults.Max(r => r.Score) < 0.35f)
+            {
+                useAiFallback = true;
+                fallbackReason = "Low confidence in document matches";
+            }
+
+            // ── Step 5: Send metadata ──────────────────────────────
+            var metadata = new
+            {
+                answerSource = useAiFallback ? "ai_fallback" : "document",
+                fallbackReason = useAiFallback ? fallbackReason : null
+            };
+            var metadataJson = System.Text.Json.JsonSerializer.Serialize(metadata);
+            await response.WriteAsync($"event: metadata\ndata: {metadataJson}\n\n");
+            await response.Body.FlushAsync();
+
+            // ── Step 6: Send sources ───────────────────────────────
+            var sources = rerankedResults.Select(r => new SourceChunk
             {
                 Text = r.Text,
                 Score = r.Score,
@@ -190,30 +281,63 @@ public class QnAService
                 {
                     PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
                 });
-            // Send sources as single line (no newlines in JSON)
             await response.WriteAsync($"event: sources\ndata: {sourcesJson}\n\n");
             await response.Body.FlushAsync();
 
-            // ── Step 5: Build prompt ───────────────────────────────
-            var context = string.Join("\n\n---\n\n",
-                searchResults.Select((r, i) =>
-                    $"[Source {i + 1}]\n{r.Text}"));
+            string systemPrompt;
+            string userMessage;
 
-            var systemPrompt = """
-            You are a helpful document assistant.
-            Answer the user's question based ONLY on the provided context.
-            If the answer is not in the context, say "I don't have enough information in this document to answer that."
-            Be concise and accurate.
-            """;
+            if (useAiFallback)
+            {
+                // ── AI Fallback Prompt ─────────────────────────────
+                _logger.LogInformation(
+                    "Using AI fallback streaming for question: {Question}",
+                    question);
 
-            var userMessage = $"""
-            Context:
-            {context}
+                systemPrompt = "You are a helpful AI assistant providing general knowledge answers.";
+                userMessage = $"""
+                    You are a knowledgeable AI assistant. The user has uploaded a document titled "{document.OriginalFileName}" and is asking a question.
+                    
+                    The document does not contain sufficient information to answer this question: "{question}"
+                    
+                    Please provide a helpful answer based on your general knowledge. Be informative and accurate.
+                    
+                    Important:
+                    1. Start with: "⚠️ This answer is from AI general knowledge (not found in your document)"
+                    2. Provide a comprehensive answer to the question
+                    3. If relevant, suggest how this might relate to the document topic
+                    4. Keep your response clear and concise
+                    """;
+            }
+            else
+            {
+                // ── Document-Based Prompt ──────────────────────────
+                var context = string.Join("\n\n---\n\n",
+                    rerankedResults.Select((r, i) =>
+                        $"[Source {i + 1}]\n{r.Text}"));
 
-            Question: {question}
-            """;
+                systemPrompt = """
+                You are an expert document assistant. Your task is to provide comprehensive, accurate answers based on the provided context.
+                
+                Instructions:
+                1. Carefully analyze ALL provided sources to extract relevant information
+                2. Synthesize information from multiple sources when applicable
+                3. Provide detailed answers when the context supports it
+                4. If information is partially available, provide what you can and note what's missing
+                5. Only say you don't have enough information if the context is completely unrelated to the question
+                6. When citing sources, mention which source number(s) you used
+                7. Be thorough but concise - prioritize completeness over brevity
+                """;
 
-            // ── Step 6: Stream tokens ──────────────────────────────
+                userMessage = $"""
+                Context:
+                {context}
+
+                Question: {question}
+                """;
+            }
+
+            // ── Step 7: Stream tokens ──────────────────────────────
             await WriteSSEAsync(response, "status", "Generating answer...");
 
             await foreach (var token in _nimService
@@ -230,20 +354,22 @@ public class QnAService
                 await response.Body.FlushAsync();
             }
 
-            // ── Step 7: Save to history ────────────────────────────
+            // ── Step 8: Save to history ────────────────────────────
             var chatMessage = new ChatMessage
             {
                 UserId = userId,
                 DocumentId = document.Id,
                 Question = question,
                 Answer = fullAnswer.ToString(),
-                SourceChunks = sourcesJson
+                SourceChunks = sourcesJson,
+                AnswerSource = useAiFallback ? "ai_fallback" : "document",
+                FallbackReason = useAiFallback ? fallbackReason : null
             };
 
             _db.ChatMessages.Add(chatMessage);
             await _db.SaveChangesAsync();
 
-            // ── Step 8: Signal completion ──────────────────────────
+            // ── Step 9: Signal completion ──────────────────────────
             await WriteSSEAsync(response, "done", "");
 
             _logger.LogInformation(
@@ -288,7 +414,9 @@ public class QnAService
                 ?? new List<SourceChunk>(),
             DocumentId = m.DocumentId,
             DocumentName = m.Document?.OriginalFileName,
-            CreatedAt = m.CreatedAt
+            CreatedAt = m.CreatedAt,
+            AnswerSource = m.AnswerSource,
+            FallbackReason = m.FallbackReason
         }).ToList();
     }
 
@@ -313,5 +441,47 @@ public class QnAService
             _db.ChatMessages.Remove(message);
             await _db.SaveChangesAsync();
         }
+    }
+
+    // ── Re-Ranking Logic ──────────────────────────────────────
+    /// <summary>
+    /// Re-ranks search results using keyword matching and position boosting
+    /// </summary>
+    private List<(string Text, float Score, int ChunkIndex)> ReRankResults(
+        List<(string Text, float Score, int ChunkIndex)> results,
+        string question)
+    {
+        // Extract key terms from question (simple approach)
+        var questionTerms = question
+            .ToLower()
+            .Split(new[] { ' ', ',', '.', '?', '!' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length > 3) // Filter out short words
+            .Distinct()
+            .ToList();
+
+        var reranked = results.Select(r =>
+        {
+            var textLower = r.Text.ToLower();
+            
+            // Calculate keyword overlap score
+            var keywordScore = questionTerms.Count(term => textLower.Contains(term)) / (float)Math.Max(questionTerms.Count, 1);
+            
+            // Boost based on position (earlier chunks often have important context)
+            var positionBoost = 1.0f / (1.0f + r.ChunkIndex * 0.05f);
+            
+            // Combined score: 70% vector similarity + 20% keyword match + 10% position
+            var finalScore = (r.Score * 0.7f) + (keywordScore * 0.2f) + (positionBoost * 0.1f);
+            
+            return (r.Text, finalScore, r.ChunkIndex);
+        })
+        .OrderByDescending(r => r.finalScore)
+        .ToList();
+
+        _logger.LogInformation(
+            "Re-ranked {Count} results. Top score: {Score:F3}",
+            reranked.Count,
+            reranked.FirstOrDefault().finalScore);
+
+        return reranked;
     }
 }

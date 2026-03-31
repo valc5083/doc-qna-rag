@@ -48,6 +48,8 @@ export interface AskResponse {
   createdAt: string;
   question: string;
   sources: SourceChunk[];
+  answerSource: 'document' | 'ai_fallback';
+  fallbackReason?: string;
 }
 
 export interface ChatHistoryItem {
@@ -58,6 +60,8 @@ export interface ChatHistoryItem {
   id: string;
   question: string;
   sources: SourceChunk[];
+  answerSource: 'document' | 'ai_fallback';
+  fallbackReason?: string;
 }
 
 export interface ChatBubble {
@@ -66,6 +70,8 @@ export interface ChatBubble {
   id: string;
   sources?: SourceChunk[];
   type: "user" | "assistant";
+  answerSource?: 'document' | 'ai_fallback';
+  fallbackReason?: string;
 }
 
 export interface CollectionDocumentResponse {

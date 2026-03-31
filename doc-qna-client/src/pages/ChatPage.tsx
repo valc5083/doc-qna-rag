@@ -12,7 +12,7 @@ import {
   Divider,
   IconButton,
 } from "@mui/material";
-import { Send, ArrowBack, History } from "@mui/icons-material";
+import { Send, ArrowBack, History, Warning, CheckCircle } from "@mui/icons-material";
 import ReactMarkdown from "react-markdown";
 import { qnaApi } from "../api/qnaApi";
 import { documentApi } from "../api/documentApi";
@@ -31,7 +31,6 @@ import {
   BackButton,
   MessagesArea,
   UserBubble,
-  AssistantBubble,
   InputArea,
   QuestionInput,
   SendButton,
@@ -39,6 +38,15 @@ import {
   EmptyChatIcon,
   EmptyChatText,
   EmptyChatSub,
+  FallbackWarning,
+  FallbackWarningTitle,
+  FallbackWarningText,
+  FallbackReasonText,
+  DocumentSourceBadge,
+  AnswerContainer,
+  AssistantBubbleDocument,
+  AssistantBubbleAI,
+  MarkdownContent,
 } from "../components/styles/ChatStyles";
 import usePageTitle from "../hooks/usePageTitle";
 
@@ -121,6 +129,8 @@ const ChatPage = () => {
               content: item.answer,
               sources: Array.isArray(item.sources) ? item.sources : [],
               createdAt: item.createdAt,
+              answerSource: item.answerSource,
+              fallbackReason: item.fallbackReason,
             });
 
             // ⭐ stop at selected item
@@ -186,6 +196,8 @@ const ChatPage = () => {
       content: "",
       sources: [],
       createdAt: new Date().toISOString(),
+      answerSource: 'document',
+      fallbackReason: undefined,
     };
     setMessages((prev) => [...prev, assistantBubble]);
 
@@ -215,6 +227,15 @@ const ChatPage = () => {
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === assistantId ? { ...msg, sources } : msg,
+          ),
+        );
+      },
+
+      // onMetadata — attach answer source metadata
+      (answerSource: 'document' | 'ai_fallback', fallbackReason?: string) => {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantId ? { ...msg, answerSource, fallbackReason } : msg,
           ),
         );
       },
@@ -273,6 +294,8 @@ const ChatPage = () => {
         content: item.answer,
         sources: Array.isArray(item.sources) ? item.sources : [],
         createdAt: item.createdAt,
+        answerSource: item.answerSource,
+        fallbackReason: item.fallbackReason,
       });
 
       if (item.id === selectedItem.id) break; // ✅ correct stop
@@ -348,30 +371,77 @@ const ChatPage = () => {
                 {msg.type === "user" ? (
                   <UserBubble>{msg.content}</UserBubble>
                 ) : msg.content ? (
-                  <AssistantBubble elevation={0}>
-                    <Typography
-                      component="div"
-                      sx={{ fontSize: "0.95rem", lineHeight: 1.6 }}
-                    >
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
-                      {streamingId === msg.id && (
-                        <span
-                          style={{
-                            display: "inline-block",
-                            width: 2,
-                            height: "1em",
-                            background: "#2E75B6",
-                            marginLeft: 2,
-                            animation: "blink 1s step-end infinite",
-                            verticalAlign: "text-bottom",
-                          }}
-                        />
-                      )}
-                    </Typography>
-                    {Array.isArray(msg.sources) && msg.sources.length > 0 && (
-                      <SourceViewer sources={msg.sources} />
+                  <AnswerContainer>
+                    {/* AI Fallback Warning */}
+                    {msg.answerSource === 'ai_fallback' && (
+                      <FallbackWarning>
+                        <FallbackWarningTitle>
+                          <Warning sx={{ fontSize: 18 }} />
+                          AI General Knowledge
+                        </FallbackWarningTitle>
+                        <FallbackWarningText>
+                          This answer is from AI general knowledge (not found in your document)
+                        </FallbackWarningText>
+                        {msg.fallbackReason && (
+                          <FallbackReasonText>
+                            Reason: {msg.fallbackReason}
+                          </FallbackReasonText>
+                        )}
+                      </FallbackWarning>
                     )}
-                  </AssistantBubble>
+
+                    {/* Document Answer Indicator */}
+                    {msg.answerSource === 'document' && msg.sources && msg.sources.length > 0 && (
+                      <DocumentSourceBadge>
+                        <CheckCircle sx={{ fontSize: 14 }} />
+                        From document ({msg.sources.length} source{msg.sources.length > 1 ? 's' : ''})
+                      </DocumentSourceBadge>
+                    )}
+
+                    {/* Answer Bubble with conditional styling */}
+                    {msg.answerSource === 'ai_fallback' ? (
+                      <AssistantBubbleAI elevation={0}>
+                        <MarkdownContent>
+                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          {streamingId === msg.id && (
+                            <span
+                              style={{
+                                display: "inline-block",
+                                width: 2,
+                                height: "1em",
+                                background: "#ed6c02",
+                                marginLeft: 2,
+                                animation: "blink 1s step-end infinite",
+                                verticalAlign: "text-bottom",
+                              }}
+                            />
+                          )}
+                        </MarkdownContent>
+                      </AssistantBubbleAI>
+                    ) : (
+                      <AssistantBubbleDocument elevation={0}>
+                        <MarkdownContent>
+                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          {streamingId === msg.id && (
+                            <span
+                              style={{
+                                display: "inline-block",
+                                width: 2,
+                                height: "1em",
+                                background: "#2E75B6",
+                                marginLeft: 2,
+                                animation: "blink 1s step-end infinite",
+                                verticalAlign: "text-bottom",
+                              }}
+                            />
+                          )}
+                        </MarkdownContent>
+                        {msg.sources && msg.sources.length > 0 && (
+                          <SourceViewer sources={msg.sources} />
+                        )}
+                      </AssistantBubbleDocument>
+                    )}
+                  </AnswerContainer>
                 ) : (
                   // ← Thinking bubble OUTSIDE AssistantBubble
                   <Box

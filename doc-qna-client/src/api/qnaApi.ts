@@ -20,6 +20,7 @@ export const qnaApi = {
     token: string,
     onToken: (token: string) => void,
     onSources: (sources: SourceChunk[]) => void,
+    onMetadata: (answerSource: 'document' | 'ai_fallback', fallbackReason?: string) => void,
     onStatus: (status: string) => void,
     onDone: () => void,
     onError: (error: string) => void,
@@ -36,6 +37,13 @@ export const qnaApi = {
       `&access_token=${encodeURIComponent(token)}`;
 
     const eventSource = new EventSource(url);
+
+    eventSource.addEventListener("metadata", (e) => {
+      try {
+        const metadata = JSON.parse((e as MessageEvent).data);
+        onMetadata(metadata.answerSource, metadata.fallbackReason);
+      } catch {}
+    });
 
     eventSource.addEventListener("token", (e) => {
       const text = (e as MessageEvent).data

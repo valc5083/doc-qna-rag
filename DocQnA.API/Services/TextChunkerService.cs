@@ -13,11 +13,11 @@ public class TextChunkerService
 {
     private readonly ILogger<TextChunkerService> _logger;
 
-    // Chunk size in characters (~500 tokens ≈ 2000 chars)
-    private const int ChunkSize = 2000;
+    // Chunk size in characters (~750 tokens ≈ 3000 chars)
+    private const int ChunkSize = 3000;
 
-    // Overlap between chunks to preserve context
-    private const int ChunkOverlap = 200;
+    // Overlap between chunks to preserve context (increased for better continuity)
+    private const int ChunkOverlap = 500;
 
     public TextChunkerService(ILogger<TextChunkerService> logger)
     {
