@@ -40,15 +40,21 @@ import {
   NavTitle,
   NavEmail,
   NavLogoutButton,
+  NavActions,
   MainContent,
 } from "../components/styles/DocumentStyles";
 import {
   CollectionCard,
   CollectionCardHeader,
+  CollectionHeaderInfo,
+  CollectionHeaderActions,
   CollectionName,
   CollectionDescription,
   CollectionBody,
   CollectionDocItem,
+  CollectionDocInfo,
+  CollectionDocTitle,
+  CollectionDocActions,
   CreateCollectionCard,
   CollectionInput,
   CreateButton,
@@ -224,12 +230,12 @@ const CollectionsPage = () => {
           </IconButton>
           <NavTitle>🗂️ Collections</NavTitle>
         </Box>
-        <Box display="flex" alignItems="center" gap={2}>
+        <NavActions>
           <NavEmail>{email}</NavEmail>
-          <NavLogoutButton variant="outlined" onClick={handleLogout}>
+          <NavLogoutButton variant="outlined" size="small" onClick={handleLogout}>
             Logout
           </NavLogoutButton>
-        </Box>
+        </NavActions>
       </NavBar>
 
       <MainContent>
@@ -301,7 +307,7 @@ const CollectionsPage = () => {
             <CollectionCard key={col.id}>
               {/* Card Header */}
               <CollectionCardHeader>
-                <Box flex={1}>
+                <CollectionHeaderInfo>
                   <Box display="flex" alignItems="center" gap={1.5}>
                     <FolderOpen sx={{ color: "#ffffff" }} />
                     <CollectionName>{col.name}</CollectionName>
@@ -315,9 +321,9 @@ const CollectionsPage = () => {
                       {col.description}
                     </CollectionDescription>
                   )}
-                </Box>
+                </CollectionHeaderInfo>
 
-                <Box display="flex" alignItems="center" gap={1}>
+                <CollectionHeaderActions>
                   <Tooltip title="Add document">
                     <IconButton
                       size="small"
@@ -363,7 +369,7 @@ const CollectionsPage = () => {
                   >
                     <Delete fontSize="small" />
                   </DeleteCollectionButton>
-                </Box>
+                </CollectionHeaderActions>
               </CollectionCardHeader>
 
               {/* Documents List */}
@@ -378,23 +384,23 @@ const CollectionsPage = () => {
                   ) : (
                     col.documents.map((doc) => (
                       <CollectionDocItem key={doc.id}>
-                        <Box display="flex" alignItems="center" gap={1.5}>
+                        <CollectionDocInfo>
                           <PictureAsPdf
                             sx={{ color: "#e53935", fontSize: 28 }}
                           />
-                          <Box>
-                            <Typography fontWeight={600} fontSize="0.9rem">
+                          <Box minWidth={0}>
+                            <CollectionDocTitle>
                               {doc.originalFileName}
-                            </Typography>
+                            </CollectionDocTitle>
                             <Typography fontSize="0.75rem" color="#888888">
                               {formatSize(doc.fileSizeBytes)}
                               {doc.chunkCount > 0 &&
                                 ` · ${doc.chunkCount} chunks`}
                             </Typography>
                           </Box>
-                        </Box>
+                        </CollectionDocInfo>
 
-                        <Box display="flex" alignItems="center" gap={1}>
+                        <CollectionDocActions>
                           <Chip
                             label={doc.status}
                             size="small"
@@ -427,7 +433,7 @@ const CollectionsPage = () => {
                               <RemoveCircleOutline fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                        </Box>
+                        </CollectionDocActions>
                       </CollectionDocItem>
                     ))
                   )}

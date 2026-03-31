@@ -20,6 +20,8 @@ export const NavBar = styled(Box)({
 
   "@media (max-width: 600px)": {
     padding: "12px 16px",
+    alignItems: "flex-start",
+    justifyContent: "flex-start",
     flexWrap: "wrap",
     gap: 8,
   },
@@ -29,11 +31,36 @@ export const NavTitle = styled(Typography)({
   color: "#ffffff",
   fontWeight: 700,
   fontSize: "1.4rem",
+  "@media (max-width: 600px)": {
+    fontSize: "1.2rem",
+  },
 });
 
 export const NavEmail = styled(Typography)({
   color: "rgba(255,255,255,0.8)",
   fontSize: "0.875rem",
+  maxWidth: "min(100%, 320px)",
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  "@media (max-width: 600px)": {
+    fontSize: "0.78rem",
+    flexBasis: "100%",
+    maxWidth: "100%",
+  },
+});
+
+export const NavActions = styled(Box)({
+  display: "flex",
+  alignItems: "center",
+  gap: 16,
+  flexWrap: "wrap",
+  justifyContent: "flex-end",
+  "@media (max-width: 600px)": {
+    width: "100%",
+    gap: 8,
+    justifyContent: "flex-start",
+  },
 });
 
 export const NavLogoutButton = styled(Button)({
@@ -42,8 +69,10 @@ export const NavLogoutButton = styled(Button)({
   borderColor: "rgba(255, 255, 255, 0.67)",
   borderRadius: 8,
   textTransform: "none",
+  whiteSpace: "nowrap",
   fontWeight: 600,
   fontSize: "0.85rem",
+  minWidth: "fit-content",
   "&:hover": {
     borderColor: "#ffcdd2",
     background: "rgba(245, 5, 29, 0.91)",
@@ -55,8 +84,10 @@ export const NavHistoryButton = styled(Button)({
   borderColor: "rgba(255,255,255,0.5)",
   borderRadius: 8,
   textTransform: "none",
+  whiteSpace: "nowrap",
   fontWeight: 600,
   fontSize: "0.85rem",
+  minWidth: "fit-content",
   background: "rgba(255,255,255,0.15)",
   "&:hover": {
     borderColor: "#ffffff",
@@ -69,8 +100,10 @@ export const NavCollectionButton = styled(Button)({
   borderColor: "rgba(255,255,255,0.5)",
   borderRadius: 8,
   textTransform: "none",
+  whiteSpace: "nowrap",
   fontWeight: 600,
   fontSize: "0.85rem",
+  minWidth: "fit-content",
   background: "rgba(255,255,255,0.15)",
   "&:hover": {
     borderColor: "#ffffff",
@@ -87,7 +120,7 @@ export const MainContent = styled(Box)({
   width: "100%",
 
   "@media (max-width: 600px)": {
-    padding: "16px",
+    padding: "14px",
   },
 });
 
@@ -154,6 +187,12 @@ export const DocumentCard = styled(Card)({
   alignItems: "center",
   justifyContent: "space-between",
   transition: "box-shadow 0.2s",
+  gap: 12,
+  "@media (max-width: 600px)": {
+    padding: "12px",
+    alignItems: "stretch",
+    flexDirection: "column",
+  },
   "&:hover": {
     boxShadow: "0 4px 16px rgba(0,0,0,0.14)",
   },
@@ -164,12 +203,16 @@ export const DocumentInfo = styled(Box)({
   alignItems: "center",
   gap: 16,
   flex: 1,
+  minWidth: 0,
 });
 
 export const DocumentName = styled(Typography)({
   fontWeight: 600,
   fontSize: "0.95rem",
   color: "#1A1A1A",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 });
 
 export const DocumentMeta = styled(Typography)({

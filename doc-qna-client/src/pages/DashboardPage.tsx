@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Box } from "@mui/material";
 import { History, Folder, AdminPanelSettings } from "@mui/icons-material";
 import { useAuthStore } from "../store/authStore";
 import { authApi } from "../api/authApi";
@@ -19,6 +18,7 @@ import {
   SectionTitle,
   NavHistoryButton,
   NavCollectionButton,
+  NavActions,
 } from "../components/styles/DocumentStyles";
 import { DocumentListSkeleton } from "../components/skeletons/DocumentSkeleton";
 import usePageTitle from "../hooks/usePageTitle";
@@ -86,11 +86,12 @@ const DashboardPage = () => {
       {/* Nav Bar */}
       <NavBar>
         <NavTitle>🤖 DocQnA</NavTitle>
-        <Box display="flex" alignItems="center" gap={2}>
+        <NavActions>
           <NavEmail>{email}</NavEmail>
           {isAdmin && (
             <NavCollectionButton
               variant="outlined"
+              size="small"
               startIcon={<AdminPanelSettings />}
               onClick={() => navigate("/admin")}
               sx={{
@@ -106,6 +107,7 @@ const DashboardPage = () => {
           )}
           <NavCollectionButton
             variant="outlined"
+            size="small"
             startIcon={<Folder />}
             onClick={() => navigate("/collections")}
           >
@@ -113,15 +115,16 @@ const DashboardPage = () => {
           </NavCollectionButton>
           <NavHistoryButton
             variant="outlined"
+            size="small"
             startIcon={<History />}
             onClick={() => navigate("/history")}
           >
             History
           </NavHistoryButton>
-          <NavLogoutButton variant="outlined" onClick={handleLogout}>
+          <NavLogoutButton variant="outlined" size="small" onClick={handleLogout}>
             Logout
           </NavLogoutButton>
-        </Box>
+        </NavActions>
       </NavBar>
 
       {/* Main Content */}

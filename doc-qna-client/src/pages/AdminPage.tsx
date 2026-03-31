@@ -31,8 +31,12 @@ import type {
 import {
   AdminLayout,
   AdminNav,
+  AdminNavLeft,
+  AdminNavActions,
+  AdminNavEmail,
   AdminNavTitle,
   AdminContent,
+  AdminTabs,
   StatsGrid,
   StatBox,
   StatValue,
@@ -179,7 +183,7 @@ const AdminPage = () => {
     <AdminLayout>
       {/* Nav */}
       <AdminNav>
-        <Box display="flex" alignItems="center" gap={2}>
+        <AdminNavLeft>
           <IconButton
             onClick={() => navigate("/dashboard")}
             sx={{ color: "#8B8FA8" }}
@@ -187,11 +191,9 @@ const AdminPage = () => {
             <ArrowBack />
           </IconButton>
           <AdminNavTitle>🛡️ Admin Dashboard</AdminNavTitle>
-        </Box>
-        <Box display="flex" alignItems="center" gap={2}>
-          <Typography fontSize="0.8rem" color="#8B8FA8">
-            {email}
-          </Typography>
+        </AdminNavLeft>
+        <AdminNavActions>
+          <AdminNavEmail>{email}</AdminNavEmail>
           <Tooltip title="Refresh data">
             <IconButton
               onClick={fetchAll}
@@ -218,7 +220,7 @@ const AdminPage = () => {
           >
             Logout
           </Button>
-        </Box>
+        </AdminNavActions>
       </AdminNav>
 
       <AdminContent>
@@ -232,19 +234,18 @@ const AdminPage = () => {
         ) : (
           <>
             {/* Tabs */}
-            <Box display="flex" gap={1} mb={3}>
+            <AdminTabs>
               {tabs.map((t) => (
                 <TabButton
                   key={t.key}
                   active={tab === t.key}
                   onClick={() => setTab(t.key)}
-                  sx={{ display: "flex", alignItems: "center", gap: 1 }}
                 >
                   {t.icon}
                   {t.label}
                 </TabButton>
               ))}
-            </Box>
+            </AdminTabs>
 
             {/* ── OVERVIEW ── */}
             {tab === "overview" && stats && (

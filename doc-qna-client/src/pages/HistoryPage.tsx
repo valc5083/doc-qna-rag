@@ -27,6 +27,7 @@ import {
   NavTitle,
   NavEmail,
   NavLogoutButton,
+  NavActions,
   MainContent,
 } from "../components/styles/DocumentStyles";
 import { useAuthStore } from "../store/authStore";
@@ -144,12 +145,12 @@ const HistoryPage = () => {
           </IconButton>
           <NavTitle>📜 Chat History</NavTitle>
         </Box>
-        <Box display="flex" alignItems="center" gap={2}>
+        <NavActions>
           <NavEmail>{email}</NavEmail>
-          <NavLogoutButton variant="outlined" onClick={handleLogout}>
+          <NavLogoutButton variant="outlined" size="small" onClick={handleLogout}>
             Logout
           </NavLogoutButton>
-        </Box>
+        </NavActions>
       </NavBar>
 
       <MainContent>
