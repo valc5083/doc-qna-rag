@@ -71,30 +71,54 @@ public class IngestionService
             await _qdrantService.CreateCollectionAsync(
                 document.QdrantCollectionName);
 
-            // ── Step 4: Embed each chunk + store in Qdrant ─────
+            // ── Step 4: Batch embed all chunks ────────────────────────────
             _logger.LogInformation(
-                "[{DocId}] Step 4: Embedding {Count} chunks...", documentId, chunks.Count);
+                "[{DocId}] Step 4: Batch embedding {Count} chunks...",
+                documentId, chunks.Count);
 
-            var points = new List<(string Id, List<float> Vector, string Text, int ChunkIndex)>();
+            var chunkTexts = chunks.Select(c => c.Text).ToList();
+            List<List<float>> allEmbeddings;
 
-            foreach (var chunk in chunks)
+            try
             {
-                var embedding = await _nimService.GetEmbeddingAsync(chunk.Text);
-
-                points.Add((
-                    Id: Guid.NewGuid().ToString(),
-                    Vector: embedding,
-                    Text: chunk.Text,
-                    ChunkIndex: chunk.Index
-                ));
+                // Send all chunks in one API call — much faster!
+                allEmbeddings = await _nimService
+                    .GetEmbeddingsBatchAsync(chunkTexts);
 
                 _logger.LogInformation(
-                    "[{DocId}] Embedded chunk {Index}/{Total}",
-                    documentId, chunk.Index + 1, chunks.Count);
+                    "[{DocId}] Batch embedding complete — {Count} vectors",
+                    documentId, allEmbeddings.Count);
+            }
+            catch (Exception ex)
+            {
+                // Graceful fallback to sequential if batch fails
+                _logger.LogWarning(ex,
+                    "[{DocId}] Batch embedding failed, falling back to sequential",
+                    documentId);
+
+                allEmbeddings = new List<List<float>>();
+                foreach (var chunk in chunks)
+                {
+                    var emb = await _nimService.GetEmbeddingAsync(chunk.Text);
+                    allEmbeddings.Add(emb);
+                    _logger.LogInformation(
+                        "[{DocId}] Embedded chunk {Index}/{Total}",
+                        documentId, allEmbeddings.Count, chunks.Count);
+                }
             }
 
-            // ── Step 5: Batch upsert to Qdrant ─────────────────
-            _logger.LogInformation("[{DocId}] Step 5: Storing vectors in Qdrant...", documentId);
+            // Build Qdrant points from batch results
+            var points = chunks.Select((chunk, i) =>
+                (
+                    Id: Guid.NewGuid().ToString(),
+                    Vector: allEmbeddings[i],
+                    Text: chunk.Text,
+                    ChunkIndex: chunk.Index
+                )).ToList();
+
+            // ── Step 5: Store in Qdrant ────────────────────────────────────
+            _logger.LogInformation(
+                "[{DocId}] Step 5: Storing vectors in Qdrant...", documentId);
             await _qdrantService.UpsertVectorsAsync(
                 document.QdrantCollectionName, points);
 

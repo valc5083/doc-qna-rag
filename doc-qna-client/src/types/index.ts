@@ -140,3 +140,24 @@ export interface AdminConversation {
   sourceCount: number;
   userEmail: string;
 }
+
+export interface AskCollectionRequest {
+  collectionId: string;
+  question: string;
+}
+
+export interface CollectionSourceChunk {
+  chunkIndex: number;
+  documentId: string;
+  documentName: string;
+  score: number;
+  text: string;
+}
+
+export interface CollectionAskResponse {
+  answer: string;
+  createdAt: string;
+  documentsSearched: number;
+  question: string;
+  sources: CollectionSourceChunk[];
+}

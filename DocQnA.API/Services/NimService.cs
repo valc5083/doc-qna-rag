@@ -49,7 +49,6 @@ public class NimService
 
         var response = await _httpClient.SendAsync(request);
         var responseBody = await response.Content.ReadAsStringAsync();
-        _logger.LogError("NIM DEBUG → Status: {Status}, Body: {Body}", response.StatusCode, responseBody);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -62,6 +61,57 @@ public class NimService
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
         return result!.Data[0].Embedding;
+    }
+
+    // ── Batch Embeddings ──────────────────────────────────────────
+    public async Task<List<List<float>>> GetEmbeddingsBatchAsync(
+        List<string> texts)
+    {
+        var apiKey = _config["Nvidianim:ApiKey"]!;
+        var model = _config["Nvidianim:EmbeddingModel"]!;
+
+        var requestBody = new
+        {
+            input = texts,
+            model = model,
+            encoding_format = "float",
+            input_type = "passage",
+            truncate = "END"
+        };
+
+        var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            "https://integrate.api.nvidia.com/v1/embeddings");
+
+        request.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", apiKey);
+
+        request.Content = new StringContent(
+            JsonSerializer.Serialize(requestBody),
+            Encoding.UTF8,
+            "application/json");
+
+        var response = await _httpClient.SendAsync(request);
+        var responseBody = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError(
+                "Batch embedding error: {Body}", responseBody);
+            throw new Exception(
+                $"Batch embedding failed: {responseBody}");
+        }
+
+        var result = JsonSerializer.Deserialize<NimEmbeddingResponse>(
+            responseBody,
+            new JsonSerializerOptions
+            { PropertyNameCaseInsensitive = true });
+
+        // Sort by index to preserve chunk order
+        return result!.Data
+            .OrderBy(d => d.Index)
+            .Select(d => d.Embedding)
+            .ToList();
     }
 
     // ── Chat Completion ───────────────────────────────────────
@@ -173,8 +223,64 @@ public class NimService
                 yield return content;
         }
     }
-}
 
+// ── Re-Ranking ────────────────────────────────────────────────
+public async Task<List<RerankResult>> RerankAsync(
+    string query,
+    List<string> documents)
+    {
+        var apiKey = _config["Nvidianim:ApiKey"]!;
+
+        var requestBody = new
+        {
+            model = "nvidia/nv-rerankqa-mistral-4b-v3",
+            query = new { text = query },
+            passages = documents.Select((d, i) => new
+            {
+                text = d
+            }).ToList(),
+            truncate = "END"
+        };
+
+        var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            "https://ai.api.nvidia.com/v1/retrieval/nvidia/nv-rerankqa-mistral-4b-v3/reranking");
+
+        request.Headers.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue(
+                "Bearer", apiKey);
+
+        request.Content = new StringContent(
+            System.Text.Json.JsonSerializer.Serialize(requestBody),
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await _httpClient.SendAsync(request);
+        var responseBody = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning(
+                "Re-ranking failed: {Body} — using original order",
+                responseBody);
+            // Return original order if reranking fails
+            return documents.Select((d, i) => new RerankResult
+            {
+                Index = i,
+                Score = 1.0f - (i * 0.1f)
+            }).ToList();
+        }
+
+        var result = System.Text.Json.JsonSerializer.Deserialize<NimRerankResponse>(
+            responseBody,
+            new System.Text.Json.JsonSerializerOptions
+            { PropertyNameCaseInsensitive = true });
+
+        return result?.Rankings ?? documents
+            .Select((_, i) => new RerankResult { Index = i, Score = 0 })
+            .ToList();
+    }
+}
 // ── Response Models ───────────────────────────────────────────
 public class NimEmbeddingResponse
 {
@@ -183,6 +289,7 @@ public class NimEmbeddingResponse
 
 public class NimEmbeddingData
 {
+    public int Index { get; set; }
     public List<float> Embedding { get; set; } = new();
 }
 
@@ -205,4 +312,16 @@ public class NimMessage
 public class NimDelta
 {
     public string? Content { get; set; }
+}
+
+// ── Rerank Response Models ────────────────────────────────────
+public class NimRerankResponse
+{
+    public List<RerankResult>? Rankings { get; set; }
+}
+
+public class RerankResult
+{
+    public int Index { get; set; }
+    public float Score { get; set; }
 }

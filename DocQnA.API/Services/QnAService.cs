@@ -45,10 +45,27 @@ public class QnAService
             "Q&A request for doc {DocId}: {Question}",
             request.DocumentId, request.Question);
 
-        // ── Step 2: Embed the question ─────────────────────────
+        // ── Step 2: Embed the question ─────────────────────────────────
         _logger.LogInformation("Embedding question...");
         var questionVector = await _nimService
             .GetEmbeddingAsync(request.Question);
+
+        // ── Step 2b: Fetch recent conversation history ─────────────────
+        var recentHistory = await _db.ChatMessages
+            .Where(c =>
+                c.UserId == userId &&
+                c.DocumentId == document.Id)
+            .OrderByDescending(c => c.CreatedAt)
+            .Take(3)
+            .OrderBy(c => c.CreatedAt) // chronological for prompt
+            .ToListAsync();
+
+        var conversationContext = recentHistory.Any()
+            ? "\n\nPrevious conversation:\n" + string.Join("\n\n",
+                recentHistory.Select(h =>
+                    $"User: {h.Question}\n" +
+                    $"Assistant: {h.Answer[..Math.Min(300, h.Answer.Length)]}"))
+            : string.Empty;
 
         // ── Step 3: Search Qdrant for relevant chunks ──────────
         _logger.LogInformation("Searching Qdrant for relevant chunks...");
@@ -77,7 +94,7 @@ public class QnAService
         // ── Step 4.5: Determine if we need AI fallback ────────
         var useAiFallback = false;
         var fallbackReason = "";
-        
+
         // Check if we have insufficient relevant results
         if (rerankedResults.Count == 0)
         {
@@ -128,24 +145,27 @@ public class QnAService
                     $"[Source {i + 1}]\n{r.Text}"));
 
             var systemPrompt = """
-                You are an expert document assistant. Your task is to provide comprehensive, accurate answers based on the provided context.
-                
-                Instructions:
-                1. Carefully analyze ALL provided sources to extract relevant information
-                2. Synthesize information from multiple sources when applicable
-                3. Provide detailed answers when the context supports it
-                4. If information is partially available, provide what you can and note what's missing
-                5. Only say you don't have enough information if the context is completely unrelated to the question
-                6. When citing sources, mention which source number(s) you used
-                7. Be thorough but concise - prioritize completeness over brevity
-                """;
+                                You are an expert document assistant. Your task is to provide 
+                                comprehensive, accurate answers based on the provided context.
+    
+                                Instructions:
+                                1. Carefully analyze ALL provide    d sources to extract relevant information
+                                2. Synthesize information from multiple sources when applicable
+                                3. Use the conversation history to understand follow-up questions
+                                4. Provide detailed answers when the context supports it
+                                5. If information is partially available, provide what you can and note what's missing
+                                6. Only say you don't have enough information if the context is completely unrelated
+                                7. When citing sources, mention     which source number(s) you used
+                                8. Be thorough but concise - prioritize completeness over brevity
+                                """;
 
             var userMessage = $"""
-                Context:
-                {context}
+                                Context from document:
+                                {context}
+                                {conversationContext}
 
-                Question: {request.Question}
-                """;
+                                Current Question: {request.Question}
+                                """;
 
             answer = await _nimService.GetChatCompletionAsync(systemPrompt, userMessage);
             sources = rerankedResults.Select(r => new SourceChunk
@@ -244,7 +264,7 @@ public class QnAService
             // ── Step 4.5: Determine if we need AI fallback ────────
             var useAiFallback = false;
             var fallbackReason = "";
-            
+
             if (rerankedResults.Count == 0)
             {
                 useAiFallback = true;
@@ -329,12 +349,30 @@ public class QnAService
                 7. Be thorough but concise - prioritize completeness over brevity
                 """;
 
-                userMessage = $"""
-                Context:
-                {context}
+                var recentHistory = await _db.ChatMessages
+                                    .Where(c =>
+                                    c.UserId == userId &&
+                                    c.DocumentId == document.Id)
+                                    .OrderByDescending(c => c.CreatedAt)
+                                    .Take(3)
+                                    .OrderBy(c => c.CreatedAt)
+                                    .ToListAsync();
 
-                Question: {question}
-                """;
+                var conversationContext = recentHistory.Any()
+                    ? "\n\nPrevious conversation:\n" + string.Join("\n\n",
+                        recentHistory.Select(h =>
+                            $"User: {h.Question}\n" +
+                            $"Assistant: {h.Answer[..Math.Min(300, h.Answer.Length)]}"))
+                    : string.Empty;
+
+                // Then in userMessage for document-based path:
+                userMessage = $"""
+                                Context from document:
+                                {context}
+                                {conversationContext}
+
+                                Current Question: {question}
+                                """;
             }
 
             // ── Step 7: Stream tokens ──────────────────────────────
@@ -462,26 +500,157 @@ public class QnAService
         var reranked = results.Select(r =>
         {
             var textLower = r.Text.ToLower();
-            
+
             // Calculate keyword overlap score
             var keywordScore = questionTerms.Count(term => textLower.Contains(term)) / (float)Math.Max(questionTerms.Count, 1);
-            
+
             // Boost based on position (earlier chunks often have important context)
             var positionBoost = 1.0f / (1.0f + r.ChunkIndex * 0.05f);
-            
+
             // Combined score: 70% vector similarity + 20% keyword match + 10% position
             var finalScore = (r.Score * 0.7f) + (keywordScore * 0.2f) + (positionBoost * 0.1f);
-            
+
             return (r.Text, finalScore, r.ChunkIndex);
         })
-        .OrderByDescending(r => r.finalScore)
+        .OrderByDescending(r => r.Item2)
         .ToList();
 
         _logger.LogInformation(
             "Re-ranked {Count} results. Top score: {Score:F3}",
             reranked.Count,
-            reranked.FirstOrDefault().finalScore);
+            reranked.FirstOrDefault().Item2);
 
         return reranked;
     }
-}
+
+    public async Task<CollectionAskResponse> AskCollectionAsync(
+    AskCollectionRequest request, Guid userId)
+    {
+        // ── Get all ready documents in collection ──────────────────
+        var collectionDocs = await _db.CollectionDocuments
+            .Include(cd => cd.Document)
+            .Where(cd =>
+                cd.CollectionId == request.CollectionId &&
+                cd.Document.UserId == userId &&
+                cd.Document.Status == "ready")
+            .ToListAsync();
+
+        if (!collectionDocs.Any())
+            throw new KeyNotFoundException(
+                "No ready documents found in this collection.");
+
+        _logger.LogInformation(
+            "Multi-doc Q&A across {Count} documents",
+            collectionDocs.Count);
+
+        // ── Embed question ─────────────────────────────────────────
+        var questionVector = await _nimService
+            .GetEmbeddingAsync(request.Question);
+
+        // ── Search all document collections in parallel ────────────
+        var collectionNames = collectionDocs
+            .Select(cd => cd.Document.QdrantCollectionName)
+            .ToList();
+
+        var multiResults = await _qdrantService.SearchMultipleAsync(
+            collectionNames, questionVector,
+            topKPerCollection: 3, scoreThreshold: 0.15f);
+
+        if (!multiResults.Any())
+        {
+            return new CollectionAskResponse
+            {
+                Question = request.Question,
+                Answer = "I couldn't find relevant information across the documents in this collection.",
+                Sources = new List<CollectionSourceChunk>(),
+                DocumentsSearched = collectionDocs.Count,
+                CreatedAt = DateTime.UtcNow
+            };
+        }
+
+        // ── Re-rank combined results ───────────────────────────────
+        var reranked = ReRankMultiResults(multiResults, request.Question)
+             .Take(6)
+             .ToList();
+
+        // ── Build context with document attribution ────────────────
+        var context = string.Join("\n\n---\n\n",
+            reranked.Select((r, i) =>
+            {
+                var doc = collectionDocs.FirstOrDefault(cd =>
+                    cd.Document.QdrantCollectionName == r.CollectionName);
+                return $"[Source {i + 1} — from '{doc?.Document.OriginalFileName}']\n{r.Text}";
+            }));
+
+        // ── Get answer ─────────────────────────────────────────────
+        var systemPrompt = """
+        You are an expert document assistant searching across multiple documents.
+        Answer based ONLY on the provided context.
+        Always cite which document (Source number and filename) your answer comes from.
+        If information comes from multiple documents, synthesize it clearly.
+        """;
+
+        var userMessage = $"""
+        Context from multiple documents:
+        {context}
+
+        Question: {request.Question}
+        """;
+
+        var answer = await _nimService
+            .GetChatCompletionAsync(systemPrompt, userMessage);
+
+        // ── Build sources ──────────────────────────────────────────
+        var sources = reranked.Select(r =>
+         {
+             var doc = collectionDocs.FirstOrDefault(cd =>
+                 cd.Document.QdrantCollectionName == r.CollectionName);
+             return new CollectionSourceChunk
+             {
+                 Text = r.Text,
+                 Score = r.Score,
+                 ChunkIndex = r.ChunkIndex,
+                 DocumentName = doc?.Document.OriginalFileName ?? "",
+                 DocumentId = doc?.DocumentId ?? Guid.Empty
+             };
+         }).ToList();
+
+        return new CollectionAskResponse
+        {
+            Question = request.Question,
+            Answer = answer,
+            Sources = sources,
+            DocumentsSearched = collectionDocs.Count,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+
+    // ── Re-rank multi-document results ────────────────────────────
+    private List<(string Text, float Score,
+        int ChunkIndex, string CollectionName)>
+        ReRankMultiResults(
+            List<(string Text, float Score,
+                int ChunkIndex, string CollectionName)> results,
+            string question)
+    {
+        var questionTerms = question
+            .ToLower()
+            .Split(new[] { ' ', ',', '.', '?', '!' },
+                StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length > 3)
+            .Distinct()
+            .ToList();
+
+        return results.Select(r =>
+         {
+             var textLower = r.Text.ToLower();
+             var keywordScore = questionTerms
+                 .Count(term => textLower.Contains(term))
+                 / (float)Math.Max(questionTerms.Count, 1);
+             var finalScore = (r.Score * 0.75f) + (keywordScore * 0.25f);
+             return (r.Text, Score: finalScore, r.ChunkIndex, r.CollectionName);
+         })
+        .OrderByDescending(r => r.Score)
+         .ToList();
+     }
+ }

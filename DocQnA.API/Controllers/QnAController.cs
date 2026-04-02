@@ -93,4 +93,28 @@ public class QnAController : ControllerBase
         await _qnAService.DeleteOneAsync(id, userId);
         return NoContent();
     }
+
+    /// <summary>Ask a question across all docs in a collection</summary>
+    [HttpPost("ask-collection")]
+    public async Task<IActionResult> AskCollection(
+        [FromBody] AskCollectionRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Question))
+            return BadRequest(new { message = "Question is required." });
+
+        if (request.CollectionId == Guid.Empty)
+            return BadRequest(new { message = "CollectionId is required." });
+
+        try
+        {
+            var userId = User.GetUserId();
+            var response = await _qnAService
+                .AskCollectionAsync(request, userId);
+            return Ok(response);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
 }

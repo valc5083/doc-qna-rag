@@ -17,6 +17,7 @@ import {
   Select,
   FormControl,
   InputLabel,
+  TextField,
 } from "@mui/material";
 import {
   Add,
@@ -28,13 +29,18 @@ import {
   ArrowBack,
   Chat,
   RemoveCircleOutline,
+  QuestionAnswer,
 } from "@mui/icons-material";
 import toast from "react-hot-toast";
 import { collectionApi } from "../api/collectionApi";
 import { documentApi } from "../api/documentApi";
 import { useAuthStore } from "../store/authStore";
 import { authApi } from "../api/authApi";
-import type { CollectionResponse, DocumentListResponse } from "../types";
+import type {
+  CollectionAskResponse,
+  CollectionResponse,
+  DocumentListResponse,
+} from "../types";
 import {
   NavBar,
   NavTitle,
@@ -66,10 +72,12 @@ import { HistoryLayout } from "../components/styles/HistoryStyles";
 import ConfirmationDialog from "../components/ConfirmationDialog";
 import { CollectionListSkeleton } from "../components/skeletons/CollectionSkeleton";
 import usePageTitle from "../hooks/usePageTitle";
+import { qnaApi } from "../api/qnaApi";
+import ReactMarkdown from "react-markdown";
 
 const CollectionsPage = () => {
   const navigate = useNavigate();
-  usePageTitle('Collections');
+  usePageTitle("Collections");
 
   const { email, logout } = useAuthStore();
   const [collections, setCollections] = useState<CollectionResponse[]>([]);
@@ -93,6 +101,14 @@ const CollectionsPage = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteName, setDeleteName] = useState("");
   const [deletingCollection, setDeletingCollection] = useState(false);
+
+  const [askingCollectionId, setAskingCollectionId] = useState<string | null>(
+    null,
+  );
+  const [collectionQuestion, setCollectionQuestion] = useState("");
+  const [collectionAnswer, setCollectionAnswer] =
+    useState<CollectionAskResponse | null>(null);
+  const [askingLoading, setAskingLoading] = useState(false);
 
   const fetchAll = async () => {
     try {
@@ -205,6 +221,25 @@ const CollectionsPage = () => {
     }
   };
 
+  const handleAskCollection = async (collectionId: string) => {
+    if (!collectionQuestion.trim()) {
+      toast.error("Enter a question first.");
+      return;
+    }
+    try {
+      setAskingLoading(true);
+      const result = await qnaApi.askCollection({
+        question: collectionQuestion,
+        collectionId,
+      });
+      setCollectionAnswer(result);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to get answer.");
+    } finally {
+      setAskingLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     const refreshToken = localStorage.getItem("refreshToken") || "";
     await authApi.logout(refreshToken);
@@ -222,17 +257,18 @@ const CollectionsPage = () => {
       {/* NavBar */}
       <NavBar>
         <Box display="flex" alignItems="center" gap={2}>
-          <IconButton
-            onClick={() => navigate(-1)}
-            sx={{ color: "#ffffff" }}
-          >
+          <IconButton onClick={() => navigate(-1)} sx={{ color: "#ffffff" }}>
             <ArrowBack />
           </IconButton>
           <NavTitle>🗂️ Collections</NavTitle>
         </Box>
         <NavActions>
           <NavEmail>{email}</NavEmail>
-          <NavLogoutButton variant="outlined" size="small" onClick={handleLogout}>
+          <NavLogoutButton
+            variant="outlined"
+            size="small"
+            onClick={handleLogout}
+          >
             Logout
           </NavLogoutButton>
         </NavActions>
@@ -352,7 +388,19 @@ const CollectionsPage = () => {
                       {expandedId === col.id ? <ExpandLess /> : <ExpandMore />}
                     </IconButton>
                   </Tooltip>
-
+                  <Tooltip title="Ask a question across all docs">
+                    <IconButton
+                      size="small"
+                      sx={{ color: "#ffffff" }}
+                      onClick={() =>
+                        setAskingCollectionId(
+                          askingCollectionId === col.id ? null : col.id,
+                        )
+                      }
+                    >
+                      <QuestionAnswer />
+                    </IconButton>
+                  </Tooltip>
                   <DeleteCollectionButton
                     disabled={deletingCollection}
                     variant="outlined"
@@ -372,6 +420,120 @@ const CollectionsPage = () => {
                 </CollectionHeaderActions>
               </CollectionCardHeader>
 
+              {/* Q&A Panel */}
+              {expandedId === col.id && askingCollectionId === col.id && (
+                <Box
+                  sx={{
+                    background: "#F5F8FB",
+                    borderBottom: "1px solid #E0E0E0",
+                    p: 2,
+                  }}
+                >
+                  <Typography
+                    fontWeight={600}
+                    fontSize="0.9rem"
+                    color="#1F4E79"
+                    mb={1.5}
+                  >
+                    🔍 Ask across all {col.documentCount} document(s)
+                  </Typography>
+
+                  <Box display="flex" gap={1}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      placeholder="Ask anything about this collection..."
+                      value={collectionQuestion}
+                      onChange={(e) => setCollectionQuestion(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleAskCollection(col.id);
+                      }}
+                      sx={{
+                        "& .MuiOutlinedInput-root": { borderRadius: 2 },
+                      }}
+                    />
+                    <Button
+                      variant="contained"
+                      onClick={() => handleAskCollection(col.id)}
+                      disabled={askingLoading || !collectionQuestion.trim()}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: "none",
+                        fontWeight: 700,
+                        background: "linear-gradient(135deg, #1F4E79, #2E75B6)",
+                        minWidth: 80,
+                      }}
+                    >
+                      {askingLoading ? (
+                        <CircularProgress size={18} color="inherit" />
+                      ) : (
+                        "Ask"
+                      )}
+                    </Button>
+                  </Box>
+
+                  {collectionAnswer && (
+                    <Box mt={2}>
+                      <Typography fontSize="0.8rem" color="#888888" mb={1}>
+                        Searched {collectionAnswer.documentsSearched}{" "}
+                        document(s) · {collectionAnswer.sources.length} sources
+                        found
+                      </Typography>
+                      <Box
+                        sx={{
+                          background: "#ffffff",
+                          borderRadius: 2,
+                          p: 2,
+                          border: "1px solid #BDD7EE",
+                          fontSize: "0.9rem",
+                          lineHeight: 1.6,
+                          color: "#333333",
+                        }}
+                      >
+                        <ReactMarkdown>{collectionAnswer.answer}</ReactMarkdown>
+                      </Box>
+
+                      {collectionAnswer.sources.length > 0 && (
+                        <Box mt={1.5}>
+                          {collectionAnswer.sources.map((s, i) => (
+                            <Box
+                              key={i}
+                              sx={{
+                                background: "#EBF3FB",
+                                borderRadius: 8,
+                                p: 1.5,
+                                mb: 1,
+                                fontSize: "0.78rem",
+                                color: "#444444",
+                              }}
+                            >
+                              <Typography
+                                fontSize="0.75rem"
+                                fontWeight={700}
+                                color="#1F4E79"
+                                mb={0.5}
+                              >
+                                📄 {s.documentName} — Chunk #{s.chunkIndex}
+                                <span
+                                  style={{
+                                    color: "#2E75B6",
+                                    marginLeft: 8,
+                                  }}
+                                >
+                                  {(s.score * 100).toFixed(0)}% relevant
+                                </span>
+                              </Typography>
+                              {s.text.length > 150
+                                ? s.text.substring(0, 150) + "..."
+                                : s.text}
+                            </Box>
+                          ))}
+                        </Box>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+              )}
               {/* Documents List */}
               <Collapse in={expandedId === col.id}>
                 <CollectionBody>

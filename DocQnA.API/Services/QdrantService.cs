@@ -148,6 +148,44 @@ public class QdrantService
         )).ToList() ?? new List<(string, float, int)>();
     }
 
+    // ── Search Multiple Collections ───────────────────────────────
+    public async Task<List<(string Text, float Score,
+        int ChunkIndex, string CollectionName)>>
+        SearchMultipleAsync(
+            List<string> collectionNames,
+            List<float> queryVector,
+            int topKPerCollection = 3,
+            float scoreThreshold = 0.15f)
+    {
+        // Search all collections in parallel
+        var tasks = collectionNames.Select(async name =>
+        {
+            try
+            {
+                var results = await SearchAsync(
+                    name, queryVector,
+                    topKPerCollection, scoreThreshold);
+
+                return results.Select(r =>
+                    (r.Text, r.Score, r.ChunkIndex, name)).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Search failed for collection {Col}", name);
+                return new List<(string, float, int, string)>();
+            }
+        });
+
+        var allResults = await Task.WhenAll(tasks);
+
+        return allResults
+            .SelectMany(r => r)
+            .OrderByDescending(r => r.Item2)
+            .Take(10)
+            .ToList();
+    }
+
     // ── Delete Collection ─────────────────────────────────────
     public async Task DeleteCollectionAsync(string collectionName)
     {
