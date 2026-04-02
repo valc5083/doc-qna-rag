@@ -11,8 +11,20 @@ import {
   ListItem,
   Divider,
   IconButton,
+  Tooltip,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
-import { Send, ArrowBack, History, Warning, CheckCircle } from "@mui/icons-material";
+import {
+  Send,
+  ArrowBack,
+  History,
+  Warning,
+  CheckCircle,
+  Download,
+} from "@mui/icons-material";
 import ReactMarkdown from "react-markdown";
 import { qnaApi } from "../api/qnaApi";
 import { documentApi } from "../api/documentApi";
@@ -49,6 +61,8 @@ import {
   MarkdownContent,
 } from "../components/styles/ChatStyles";
 import usePageTitle from "../hooks/usePageTitle";
+import VoiceInput from "../components/VoiceInput";
+import { exportAsMarkdown, exportAsPDF } from "../utils/exportChat";
 
 const ChatPage = () => {
   const { documentId } = useParams<{ documentId: string }>();
@@ -70,6 +84,7 @@ const ChatPage = () => {
   const eventSourceRef = useRef<EventSource | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
+  const [exportAnchor, setExportAnchor] = useState<null | HTMLElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -196,7 +211,7 @@ const ChatPage = () => {
       content: "",
       sources: [],
       createdAt: new Date().toISOString(),
-      answerSource: 'document',
+      answerSource: "document",
       fallbackReason: undefined,
     };
     setMessages((prev) => [...prev, assistantBubble]);
@@ -232,10 +247,12 @@ const ChatPage = () => {
       },
 
       // onMetadata — attach answer source metadata
-      (answerSource: 'document' | 'ai_fallback', fallbackReason?: string) => {
+      (answerSource: "document" | "ai_fallback", fallbackReason?: string) => {
         setMessages((prev) =>
           prev.map((msg) =>
-            msg.id === assistantId ? { ...msg, answerSource, fallbackReason } : msg,
+            msg.id === assistantId
+              ? { ...msg, answerSource, fallbackReason }
+              : msg,
           ),
         );
       },
@@ -318,32 +335,7 @@ const ChatPage = () => {
     <ChatLayout>
       {/* Header */}
       <ChatHeader>
-        <Box>
-          <ChatHeaderTitle>🤖 DocQnA Chat</ChatHeaderTitle>
-          <ChatHeaderSubtitle>
-            {document ? `📄 ${document.originalFileName}` : "Loading..."}
-          </ChatHeaderSubtitle>
-        </Box>
-        <Box display="flex" alignItems="center" gap={2}>
-          {statusText && (
-            <Chip
-              label={statusText}
-              size="small"
-              sx={{
-                background: "rgba(255,255,255,0.2)",
-                color: "#ffffff",
-                fontSize: "0.75rem",
-              }}
-            />
-          )}
-
-          <IconButton
-            onClick={() => setHistoryOpen(true)}
-            sx={{ color: "#ffffff" }}
-            title="View history"
-          >
-            <History />
-          </IconButton>
+        <Box display="flex" justifyContent="flex-start">
           <BackButton
             variant="outlined"
             startIcon={<ArrowBack />}
@@ -351,6 +343,104 @@ const ChatPage = () => {
           >
             Back
           </BackButton>
+        </Box>
+
+        <Box>
+          <ChatHeaderTitle>🤖 DocQnA Chat</ChatHeaderTitle>
+          <ChatHeaderSubtitle>
+            {document ? `📄 ${document.originalFileName}` : "Loading..."}
+          </ChatHeaderSubtitle>
+        </Box>
+
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="flex-end"
+          gap={1}
+        >
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="flex-end"
+            gap={1}
+            flexWrap="wrap"
+          >
+            {statusText && (
+              <Chip
+                label={statusText}
+                size="small"
+                sx={{
+                  background: "rgba(255,255,255,0.2)",
+                  color: "#ffffff",
+                  fontSize: "0.75rem",
+                }}
+              />
+            )}
+
+            {messages.length > 0 && (
+              <>
+                <Tooltip title="Export chat">
+                  <IconButton
+                    size="small"
+                    sx={{ color: "#ffffff", width: 34, height: 34 }}
+                    onClick={(e) => setExportAnchor(e.currentTarget)}
+                  >
+                    <Download />
+                  </IconButton>
+                </Tooltip>
+
+                <Menu
+                  anchorEl={exportAnchor}
+                  open={Boolean(exportAnchor)}
+                  onClose={() => setExportAnchor(null)}
+                  PaperProps={{
+                    sx: { borderRadius: 2, minWidth: 180 },
+                  }}
+                >
+                  <MenuItem
+                    onClick={() => {
+                      exportAsMarkdown(
+                        messages,
+                        document?.originalFileName || "document",
+                      );
+                      setExportAnchor(null);
+                      toast.success("Exported as Markdown!");
+                    }}
+                  >
+                    <ListItemIcon>
+                      <Download fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Export as Markdown</ListItemText>
+                  </MenuItem>
+
+                  <MenuItem
+                    onClick={() => {
+                      exportAsPDF(
+                        messages,
+                        document?.originalFileName || "document",
+                      );
+                      setExportAnchor(null);
+                      toast.success("Exported as PDF!");
+                    }}
+                  >
+                    <ListItemIcon>
+                      <Download fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Export as PDF</ListItemText>
+                  </MenuItem>
+                </Menu>
+              </>
+            )}
+
+            <IconButton
+              onClick={() => setHistoryOpen(true)}
+              size="small"
+              sx={{ color: "#ffffff", width: 34, height: 34 }}
+              title="View history"
+            >
+              <History />
+            </IconButton>
+          </Box>
         </Box>
       </ChatHeader>
 
@@ -373,14 +463,15 @@ const ChatPage = () => {
                 ) : msg.content ? (
                   <AnswerContainer>
                     {/* AI Fallback Warning */}
-                    {msg.answerSource === 'ai_fallback' && (
+                    {msg.answerSource === "ai_fallback" && (
                       <FallbackWarning>
                         <FallbackWarningTitle>
                           <Warning sx={{ fontSize: 18 }} />
                           AI General Knowledge
                         </FallbackWarningTitle>
                         <FallbackWarningText>
-                          This answer is from AI general knowledge (not found in your document)
+                          This answer is from AI general knowledge (not found in
+                          your document)
                         </FallbackWarningText>
                         {msg.fallbackReason && (
                           <FallbackReasonText>
@@ -391,15 +482,18 @@ const ChatPage = () => {
                     )}
 
                     {/* Document Answer Indicator */}
-                    {msg.answerSource === 'document' && msg.sources && msg.sources.length > 0 && (
-                      <DocumentSourceBadge>
-                        <CheckCircle sx={{ fontSize: 14 }} />
-                        From document ({msg.sources.length} source{msg.sources.length > 1 ? 's' : ''})
-                      </DocumentSourceBadge>
-                    )}
+                    {msg.answerSource === "document" &&
+                      msg.sources &&
+                      msg.sources.length > 0 && (
+                        <DocumentSourceBadge>
+                          <CheckCircle sx={{ fontSize: 14 }} />
+                          From document ({msg.sources.length} source
+                          {msg.sources.length > 1 ? "s" : ""})
+                        </DocumentSourceBadge>
+                      )}
 
                     {/* Answer Bubble with conditional styling */}
-                    {msg.answerSource === 'ai_fallback' ? (
+                    {msg.answerSource === "ai_fallback" ? (
                       <AssistantBubbleAI elevation={0}>
                         <MarkdownContent>
                           <ReactMarkdown>{msg.content}</ReactMarkdown>
@@ -495,6 +589,12 @@ const ChatPage = () => {
           onKeyDown={handleKeyDown}
           disabled={loading}
           variant="outlined"
+        />
+        <VoiceInput
+          onTranscript={(text) =>
+            setQuestion((prev) => (prev ? `${prev} ${text}` : text))
+          }
+          disabled={loading}
         />
         <SendButton onClick={handleAsk} disabled={loading || !question.trim()}>
           {loading ? <CircularProgress size={20} color="inherit" /> : <Send />}

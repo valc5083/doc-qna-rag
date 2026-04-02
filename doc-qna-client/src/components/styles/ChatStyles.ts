@@ -13,25 +13,40 @@ export const ChatLayout = styled(Box)({
 export const ChatHeader = styled(Box)({
   background: "linear-gradient(135deg, #1F4E79, #2E75B6)",
   padding: "12px 24px",
-  display: "flex",
+  minHeight: 74,
+  display: "grid",
+  gridTemplateColumns: "auto 1fr auto",
   alignItems: "center",
-  justifyContent: "space-between",
+  gap: 16,
   boxShadow: "0 2px 12px rgba(0,0,0,0.2)",
+  "@media (max-width: 700px)": {
+    padding: "10px 12px",
+    gap: 10,
+    gridTemplateColumns: "auto 1fr auto",
+  },
 });
 
 export const ChatHeaderTitle = styled(Typography)({
   color: "#ffffff",
   fontWeight: 700,
   fontSize: "1.1rem",
+  textAlign: "center",
 });
 
 export const ChatHeaderSubtitle = styled(Typography)({
   color: "rgba(255,255,255,0.7)",
-  fontSize: "0.78rem",
-  marginTop: 2,
+  fontSize: "0.8rem",
+  marginTop: 4,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 6,
 });
 
 export const BackButton = styled(Button)({
+  height: 36,
+  minWidth: 86,
+  padding: "0 14px",
   color: "#ffffff",
   borderColor: "rgba(255,255,255,0.5)",
   borderRadius: 8,
