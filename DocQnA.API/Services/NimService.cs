@@ -64,6 +64,57 @@ public class NimService
         return result!.Data[0].Embedding;
     }
 
+    // ── Batch Embeddings ──────────────────────────────────────────
+    public async Task<List<List<float>>> GetEmbeddingsBatchAsync(
+        List<string> texts)
+    {
+        var apiKey = _config["Nvidianim:ApiKey"]!;
+        var model = _config["Nvidianim:EmbeddingModel"]!;
+
+        var requestBody = new
+        {
+            input = texts,
+            model = model,
+            encoding_format = "float",
+            input_type = "passage",
+            truncate = "END"
+        };
+
+        var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            "https://integrate.api.nvidia.com/v1/embeddings");
+
+        request.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", apiKey);
+
+        request.Content = new StringContent(
+            JsonSerializer.Serialize(requestBody),
+            Encoding.UTF8,
+            "application/json");
+
+        var response = await _httpClient.SendAsync(request);
+        var responseBody = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError(
+                "Batch embedding error: {Body}", responseBody);
+            throw new Exception(
+                $"Batch embedding failed: {responseBody}");
+        }
+
+        var result = JsonSerializer.Deserialize<NimEmbeddingResponse>(
+            responseBody,
+            new JsonSerializerOptions
+            { PropertyNameCaseInsensitive = true });
+
+        // Sort by index to preserve chunk order
+        return result!.Data
+            .OrderBy(d => d.Index)
+            .Select(d => d.Embedding)
+            .ToList();
+    }
+
     // ── Chat Completion ───────────────────────────────────────
     public async Task<string> GetChatCompletionAsync(
         string systemPrompt, string userMessage)
@@ -239,6 +290,7 @@ public class NimEmbeddingResponse
 
 public class NimEmbeddingData
 {
+    public int Index { get; set; }
     public List<float> Embedding { get; set; } = new();
 }
 

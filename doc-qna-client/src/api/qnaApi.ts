@@ -1,9 +1,11 @@
 import toast from "react-hot-toast";
 import { api } from "./authApi";
 import type {
+  AskCollectionRequest,
   AskRequest,
   AskResponse,
   ChatHistoryItem,
+  CollectionAskResponse,
   SourceChunk,
 } from "../types";
 
@@ -20,7 +22,10 @@ export const qnaApi = {
     token: string,
     onToken: (token: string) => void,
     onSources: (sources: SourceChunk[]) => void,
-    onMetadata: (answerSource: 'document' | 'ai_fallback', fallbackReason?: string) => void,
+    onMetadata: (
+      answerSource: "document" | "ai_fallback",
+      fallbackReason?: string,
+    ) => void,
     onStatus: (status: string) => void,
     onDone: () => void,
     onError: (error: string) => void,
@@ -81,6 +86,16 @@ export const qnaApi = {
     };
 
     return eventSource;
+  },
+
+  askCollection: async (
+    data: AskCollectionRequest,
+  ): Promise<CollectionAskResponse> => {
+    const res = await api.post<CollectionAskResponse>(
+      "/qna/ask-collection",
+      data,
+    );
+    return res.data;
   },
 
   getHistory: async (limit = 20): Promise<ChatHistoryItem[]> => {

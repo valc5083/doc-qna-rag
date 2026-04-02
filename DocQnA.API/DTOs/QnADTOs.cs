@@ -35,3 +35,27 @@ public class ChatHistoryResponse
     public string AnswerSource { get; set; } = "document"; // "document" or "ai_fallback"
     public string? FallbackReason { get; set; }
 }
+
+public class AskCollectionRequest
+{
+    public string Question { get; set; } = string.Empty;
+    public Guid CollectionId { get; set; }
+}
+
+public class CollectionSourceChunk
+{
+    public string Text { get; set; } = string.Empty;
+    public float Score { get; set; }
+    public int ChunkIndex { get; set; }
+    public string DocumentName { get; set; } = string.Empty;
+    public Guid DocumentId { get; set; }
+}
+
+public class CollectionAskResponse
+{
+    public string Answer { get; set; } = string.Empty;
+    public string Question { get; set; } = string.Empty;
+    public List<CollectionSourceChunk> Sources { get; set; } = new();
+    public int DocumentsSearched { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
