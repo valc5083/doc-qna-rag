@@ -106,7 +106,7 @@ const DocumentList = ({ documents, onDelete, onRefresh }: Props) => {
           <DocumentCard key={doc.id}>
             <DocumentInfo>
               <PictureAsPdf sx={{ color: "#e53935", fontSize: 32 }} />
-              <Box>
+              <Box sx={{ minWidth: 0, flex: 1 }}>
                 <DocumentName>{doc.originalFileName}</DocumentName>
                 <DocumentMeta>
                   {formatSize(doc.fileSizeBytes)}

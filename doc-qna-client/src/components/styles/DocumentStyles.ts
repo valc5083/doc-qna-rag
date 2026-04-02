@@ -207,6 +207,9 @@ export const DocumentInfo = styled(Box)({
 });
 
 export const DocumentName = styled(Typography)({
+  display: "block",
+  width: "100%",
+  maxWidth: "100%",
   fontWeight: 600,
   fontSize: "0.95rem",
   color: "#1A1A1A",

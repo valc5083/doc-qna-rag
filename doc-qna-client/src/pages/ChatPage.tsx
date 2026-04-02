@@ -335,7 +335,11 @@ const ChatPage = () => {
     <ChatLayout>
       {/* Header */}
       <ChatHeader>
-        <Box display="flex" justifyContent="flex-start">
+        <Box
+          display="flex"
+          justifyContent="flex-start"
+          sx={{ gridColumn: "1 / 2" }}
+        >
           <BackButton
             variant="outlined"
             startIcon={<ArrowBack />}
@@ -345,7 +349,15 @@ const ChatPage = () => {
           </BackButton>
         </Box>
 
-        <Box>
+        <Box
+          sx={{
+            gridColumn: "2 / 3",
+            justifySelf: "center",
+            width: "100%",
+            minWidth: 0,
+            px: { xs: 0.5, sm: 0 },
+          }}
+        >
           <ChatHeaderTitle>🤖 DocQnA Chat</ChatHeaderTitle>
           <ChatHeaderSubtitle>
             {document ? `📄 ${document.originalFileName}` : "Loading..."}
@@ -357,13 +369,14 @@ const ChatPage = () => {
           alignItems="center"
           justifyContent="flex-end"
           gap={1}
+          sx={{ gridColumn: "3 / 4" }}
         >
           <Box
             display="flex"
             alignItems="center"
             justifyContent="flex-end"
             gap={1}
-            flexWrap="wrap"
+            flexWrap="nowrap"
           >
             {statusText && (
               <Chip
@@ -373,22 +386,30 @@ const ChatPage = () => {
                   background: "rgba(255,255,255,0.2)",
                   color: "#ffffff",
                   fontSize: "0.75rem",
+                  display: { xs: "none", sm: "inline-flex" },
                 }}
               />
             )}
 
+            <Tooltip title={messages.length > 0 ? "Export chat" : ""}>
+              <span>
+                <IconButton
+                  size="small"
+                  sx={{
+                    color: "#ffffff",
+                    width: 34,
+                    height: 34,
+                    visibility: messages.length > 0 ? "visible" : "hidden",
+                  }}
+                  onClick={(e) => setExportAnchor(e.currentTarget)}
+                >
+                  <Download />
+                </IconButton>
+              </span>
+            </Tooltip>
+
             {messages.length > 0 && (
               <>
-                <Tooltip title="Export chat">
-                  <IconButton
-                    size="small"
-                    sx={{ color: "#ffffff", width: 34, height: 34 }}
-                    onClick={(e) => setExportAnchor(e.currentTarget)}
-                  >
-                    <Download />
-                  </IconButton>
-                </Tooltip>
-
                 <Menu
                   anchorEl={exportAnchor}
                   open={Boolean(exportAnchor)}
@@ -414,13 +435,18 @@ const ChatPage = () => {
                   </MenuItem>
 
                   <MenuItem
-                    onClick={() => {
-                      exportAsPDF(
-                        messages,
-                        document?.originalFileName || "document",
-                      );
-                      setExportAnchor(null);
-                      toast.success("Exported as PDF!");
+                    onClick={async () => {
+                      try {
+                        await exportAsPDF(
+                          messages,
+                          document?.originalFileName || "document",
+                        );
+                        toast.success("Exported as PDF!");
+                      } catch {
+                        toast.error("Failed to export PDF.");
+                      } finally {
+                        setExportAnchor(null);
+                      }
                     }}
                   >
                     <ListItemIcon>

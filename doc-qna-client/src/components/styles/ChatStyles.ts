@@ -15,14 +15,14 @@ export const ChatHeader = styled(Box)({
   padding: "12px 24px",
   minHeight: 74,
   display: "grid",
-  gridTemplateColumns: "auto 1fr auto",
+  gridTemplateColumns: "1fr auto 1fr",
   alignItems: "center",
   gap: 16,
   boxShadow: "0 2px 12px rgba(0,0,0,0.2)",
   "@media (max-width: 700px)": {
     padding: "10px 12px",
-    gap: 10,
-    gridTemplateColumns: "auto 1fr auto",
+    gap: 8,
+    gridTemplateColumns: "112px minmax(0, 1fr) 112px",
   },
 });
 
@@ -34,13 +34,19 @@ export const ChatHeaderTitle = styled(Typography)({
 });
 
 export const ChatHeaderSubtitle = styled(Typography)({
+  display: "block",
+  width: "100%",
   color: "rgba(255,255,255,0.7)",
   fontSize: "0.8rem",
   marginTop: 4,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 6,
+  textAlign: "center",
+  maxWidth: "min(62vw, 560px)",
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  "@media (max-width: 700px)": {
+    maxWidth: "100%",
+  },
 });
 
 export const BackButton = styled(Button)({
@@ -271,15 +277,24 @@ export const InputArea = styled(Box)({
   borderTop: "1px solid #E0E0E0",
   display: "flex",
   gap: 12,
-  alignItems: "flex-end",
+  alignItems: "center",
+  "@media (max-width: 600px)": {
+    padding: "12px",
+    gap: 10,
+    justifyContent: "center",
+  },
 });
 
 export const QuestionInput = styled(TextField)({
   flex: 1,
+  minWidth: 0,
   "& .MuiOutlinedInput-root": {
     borderRadius: 12,
     "&:hover fieldset": { borderColor: "#2E75B6" },
     "&.Mui-focused fieldset": { borderColor: "#1F4E79" },
+  },
+  "@media (max-width: 600px)": {
+    flex: "0 1 72%",
   },
 });
 
