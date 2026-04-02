@@ -2,6 +2,7 @@
 
 > Ask natural language questions over your uploaded PDF documents using AI — powered by Retrieval-Augmented Generation (RAG).
 
+![Status](https://img.shields.io/badge/Version-V2.0%20🚀-blue)
 ![Status](https://img.shields.io/badge/Status-Live%20🟢-brightgreen)
 ![Vercel](https://img.shields.io/badge/Frontend-Vercel-black)
 ![Render](https://img.shields.io/badge/API-Render-46E3B7)
@@ -18,23 +19,29 @@
 
 ## ✨ Features
 
-### ✅ Fully Implemented
+### 🚀 V2.0 Highlights
 
-- 🔐 **JWT Authentication** — Register, login, logout with refresh token rotation and auto-refresh on expiry
-- 📄 **PDF Upload** — Drag and drop with real-time status tracking, non-PDF rejection with clear error messages
-- 🧠 **Full RAG Pipeline** — Extract → Chunk → Embed → Store, fully automated in background
-- 💬 **AI-Powered Q&A** — Ask natural language questions, get grounded answers from your documents
-- 🌊 **Streaming Responses** — Real-time token-by-token answer rendering via Server-Sent Events
-- 📚 **Source Attribution** — See exactly which chunks from your document answered the question with relevance scores
-- 📜 **Chat History** — Full conversation history with stats, expand/collapse, individual delete and clear all
-- 🗂️ **Collections** — Group documents into named collections, add/remove documents, navigate to chat from collection
-- 🔒 **User Isolation** — Every user's documents, vectors and history are completely private
-- 🍞 **Toast Notifications** — Real-time feedback on every action
-- 💀 **Loading Skeletons** — Smooth loading states instead of spinners
-- 📱 **Mobile Responsive** — Works on all screen sizes
-- 🏥 **Health Check** — `/health` endpoint monitoring PostgreSQL and Qdrant
-- 🛡️ **Global Error Handling** — Clean JSON error responses via middleware
-- ✅ **FluentValidation** — Request validation on all endpoints
+- 🧠 **Conversation-Aware Q&A** — Follow-up questions understand previous context
+- ⚡ **Batch Embeddings** — Faster ingestion using NVIDIA NIM batch API with fallback
+- 🗂️ **Multi-Document Q&A** — Ask questions across entire collections
+- 🎤 **Voice Input** — Speak your question using Web Speech API (Chrome)
+- 📥 **Export Chat** — Download conversations as Markdown or PDF
+
+---
+
+### ✅ Core Features
+
+- 🔐 **JWT Authentication** — Secure login, refresh tokens, auto-refresh
+- 📄 **PDF Upload** — Drag & drop with validation and status tracking
+- 🧠 **Full RAG Pipeline** — Extract → Chunk → Embed → Store
+- 💬 **AI Q&A (RAG)** — Grounded answers from your documents
+- 🌊 **Streaming Responses** — Real-time token streaming via SSE
+- 📚 **Source Attribution** — Chunk-level citations with relevance score
+- 📜 **Chat History** — Persisted conversations with stats and management
+- 🗂️ **Collections** — Group documents and manage them easily
+- 🔒 **User Isolation** — Complete data separation per user
+- 📱 **Responsive UI** — Works across devices
+- 🛡️ **Error Handling + Validation** — Clean API responses + FluentValidation
 
 ---
 
@@ -105,11 +112,12 @@
 │  (Metadata) │               │                             │
 │  · Users    │               │  PDF → PdfPig → Extract     │
 │  · Documents│               │      → Sliding Window Chunk │
-│  · Chat     │               │      → NVIDIA NIM Embed     │
+│  · Chat     │               │      → NVIDIA NIMBatch Embed│
 │  · History  │               │      → Qdrant Store         │
 │  · Collections              │                             │
-└─────────────┘               │  Query → Embed → Search     │
-                              │        → Llama → Stream     │
+└─────────────┘               │  Query → Embed→Multi-Search │
+                              │        (Qdrant)→Re-rank->   │
+                              |        Llama → Stream       |
                          ┌────▼────┐  ┌───────▼──────┐
                          │ Qdrant  │  │ NVIDIA NIM   │
                          │ Vectors │  │ Llama 4 +    │
@@ -142,6 +150,22 @@
 | Logging        | Serilog                                                | Structured request logging         |
 | Health         | ASP.NET Health Checks                                  | PostgreSQL + Qdrant monitoring     |
 | Infrastructure | Docker + Docker Compose                                | PostgreSQL + Qdrant containers     |
+
+---
+
+## 🏆 What Makes This Production-Grade?
+
+- ✅ Context-aware AI (not just single-turn Q&A)
+- ✅ Multi-document reasoning across collections
+- ✅ Optimized embedding pipeline (batch + fallback)
+- ✅ Real-time streaming UX (SSE)
+- ✅ Voice-enabled interaction
+- ✅ Exportable conversations (PDF/Markdown)
+- ✅ Clean architecture (separation of concerns)
+- ✅ Error handling + validation + logging
+- ✅ Scalable vector search (Qdrant)
+
+> This is not a demo — it's a full-stack AI system.
 
 ---
 
@@ -413,10 +437,32 @@ Styled components keep presentation logic in dedicated files, are reusable acros
 
 ---
 
+## 🚀 V2.0 Improvements
+
+| Feature | Impact |
+|--------|--------|
+| Conversation Context | Enables follow-up questions |
+| Batch Embeddings | ~10x faster ingestion |
+| Multi-Document Q&A | Cross-document intelligence |
+| Voice Input | Hands-free interaction |
+| Export Chat | Shareable outputs |
+
+---
+
+### 🔮 Coming Next
+
+- Redis semantic caching
+- Answer highlighting inside PDFs
+- Advanced analytics dashboard
+
+---
+
 ## 👤 About
 
-Portfolio project by **ABHISHEK NARAYAN GUPTA** — Associate Software Engineer (2.2 years exp)
-demonstrating full-stack development with production-grade AI/RAG integration.
+Built by **Abhishek Narayan Gupta**  
+Associate Software Engineer (2.2 years experience)
+
+🚀 Focused on building production-grade AI systems using RAG, vector search, and modern full-stack architecture.
 
 **Stack:** `React` · `TypeScript` · `MUI` · `ASP.NET Core 8` · `EF Core` · `FluentValidation` · `NVIDIA NIM` · `Qdrant` · `Docker` · `SSE`
 
