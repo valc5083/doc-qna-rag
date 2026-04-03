@@ -224,10 +224,11 @@ public class NimService
         }
     }
 
-// ── Re-Ranking ────────────────────────────────────────────────
-public async Task<List<RerankResult>> RerankAsync(
-    string query,
-    List<string> documents)
+    // ── Re-Ranking ────────────────────────────────────────────────
+    // ── Cross-Encoder Re-Ranking ──────────────────────────────────
+    public async Task<List<RerankResult>> RerankAsync(
+        string query,
+        List<string> documents)
     {
         var apiKey = _config["Nvidianim:ApiKey"]!;
 
@@ -235,10 +236,9 @@ public async Task<List<RerankResult>> RerankAsync(
         {
             model = "nvidia/nv-rerankqa-mistral-4b-v3",
             query = new { text = query },
-            passages = documents.Select((d, i) => new
-            {
-                text = d
-            }).ToList(),
+            passages = documents
+                .Select(d => new { text = d })
+                .ToList(),
             truncate = "END"
         };
 
@@ -247,42 +247,55 @@ public async Task<List<RerankResult>> RerankAsync(
             "https://ai.api.nvidia.com/v1/retrieval/nvidia/nv-rerankqa-mistral-4b-v3/reranking");
 
         request.Headers.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue(
-                "Bearer", apiKey);
+            new AuthenticationHeaderValue("Bearer", apiKey);
 
         request.Content = new StringContent(
-            System.Text.Json.JsonSerializer.Serialize(requestBody),
-            System.Text.Encoding.UTF8,
+            JsonSerializer.Serialize(requestBody),
+            Encoding.UTF8,
             "application/json");
 
-        var response = await _httpClient.SendAsync(request);
-        var responseBody = await response.Content.ReadAsStringAsync();
-
-        if (!response.IsSuccessStatusCode)
+        try
         {
-            _logger.LogWarning(
-                "Re-ranking failed: {Body} — using original order",
-                responseBody);
-            // Return original order if reranking fails
-            return documents.Select((d, i) => new RerankResult
+            var response = await _httpClient.SendAsync(request);
+            var responseBody =
+                await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "Re-ranker returned {Status} — falling back to keyword ranking. Body: {Body}",
+                    response.StatusCode, responseBody);
+                return FallbackRank(documents.Count);
+            }
+
+            var result = JsonSerializer.Deserialize<NimRerankResponse>(
+                responseBody,
+                new JsonSerializerOptions
+                { PropertyNameCaseInsensitive = true });
+
+            return result?.Rankings
+                ?? FallbackRank(documents.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "Re-ranking failed — falling back to original order");
+            return FallbackRank(documents.Count);
+        }
+    }
+
+    // ← Fallback keeps original order if re-ranking fails
+    private static List<RerankResult> FallbackRank(int count) =>
+        Enumerable.Range(0, count)
+            .Select(i => new RerankResult
             {
                 Index = i,
-                Score = 1.0f - (i * 0.1f)
-            }).ToList();
-        }
-
-        var result = System.Text.Json.JsonSerializer.Deserialize<NimRerankResponse>(
-            responseBody,
-            new System.Text.Json.JsonSerializerOptions
-            { PropertyNameCaseInsensitive = true });
-
-        return result?.Rankings ?? documents
-            .Select((_, i) => new RerankResult { Index = i, Score = 0 })
+                Score = 1.0f - (i * 0.05f)
+            })
             .ToList();
-    }
 }
-// ── Response Models ───────────────────────────────────────────
-public class NimEmbeddingResponse
+    // ── Response Models ───────────────────────────────────────────
+    public class NimEmbeddingResponse
 {
     public List<NimEmbeddingData> Data { get; set; } = new();
 }
