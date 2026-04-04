@@ -28,7 +28,7 @@ public class SemanticCacheService
             .GetValue<int>("Redis:CacheTtlHours", 24);
     }
 
-    public async Task<CachedAnswer?> GetCachedAnswerAsync(
+    public virtual async Task<CachedAnswer?> GetCachedAnswerAsync(
         string question,
         List<float> questionEmbedding,
         Guid documentId)
@@ -85,7 +85,7 @@ public class SemanticCacheService
         }
     }
 
-    public async Task CacheAnswerAsync(
+    public virtual async Task CacheAnswerAsync(
         string question,
         List<float> questionEmbedding,
         string answer,
@@ -148,7 +148,7 @@ public class SemanticCacheService
         }
     }
 
-    public async Task InvalidateCacheAsync(Guid documentId)
+    public virtual async Task InvalidateCacheAsync(Guid documentId)
     {
         if (_redis == null) return;
 
