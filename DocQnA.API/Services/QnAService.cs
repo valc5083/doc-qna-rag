@@ -134,6 +134,20 @@ public class QnAService
             "Re-ranking complete. Top score: {Score:F3}",
             rerankResults.FirstOrDefault()?.Score);
 
+        // ── Step 5: Search images ──────────────────────────────────────
+        var imageResults = await _qdrantService.SearchImagesAsync(
+            document.QdrantCollectionName,
+            questionVector,
+            topK: 2,
+            scoreThreshold: 0.30f);
+
+        // Include image descriptions in context
+        var imageContext = imageResults.Any()
+            ? "\n\n--- Visual Content ---\n" + string.Join("\n\n",
+                imageResults.Select((r, i) =>
+                    $"[Image on page {r.PageNumber}]: {r.Description}"))
+            : string.Empty;
+
         // ── Step 4.5: Determine if we need AI fallback ────────
         var useAiFallback = false;
         var fallbackReason = "";
@@ -184,8 +198,9 @@ public class QnAService
         {
             // ── Document-Based Answer Path (Original) ─────────
             var context = string.Join("\n\n---\n\n",
-                rerankedResults.Select((r, i) =>
-                    $"[Source {i + 1}]\n{r.Text}"));
+                                rerankedResults.Select((r, i) =>
+                                    $"[Source {i + 1}]\n{r.Text}"))
+                                + imageContext;
 
             var systemPrompt = """
                                 You are an expert document assistant. Your task is to provide 
@@ -255,6 +270,15 @@ public class QnAService
             Question = request.Question,
             Answer = answer,
             Sources = sources,
+            ImageSources = imageResults.Select(r =>
+                new ImageSourceChunk
+                {
+                    Description = r.Description,
+                    Score = r.Score,
+                    PageNumber = r.PageNumber,
+                    ImageIndex = r.ImageIndex,
+                    Base64Data = r.Base64Data
+                }).ToList(),
             CreatedAt = chatMessage.CreatedAt,
             AnswerSource = useAiFallback ? "ai_fallback" : "document",
             FallbackReason = useAiFallback ? fallbackReason : null
@@ -356,6 +380,32 @@ public class QnAService
                 Score = r.Score,
                 ChunkIndex = r.ChunkIndex
             }).ToList();
+
+            var imageResults = await _qdrantService.SearchImagesAsync(
+    document.QdrantCollectionName,
+    questionVector, topK: 2, scoreThreshold: 0.30f);
+
+            if (imageResults.Any())
+            {
+                var imgJson = System.Text.Json.JsonSerializer.Serialize(
+                    imageResults.Select(r => new
+                    {
+                        description = r.Description,
+                        score = r.Score,
+                        pageNumber = r.PageNumber,
+                        imageIndex = r.ImageIndex,
+                        base64Data = r.Base64Data
+                    }),
+                    new System.Text.Json.JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy =
+                            System.Text.Json.JsonNamingPolicy.CamelCase
+                    });
+
+                await response.WriteAsync(
+                    $"event: image_sources\ndata: {imgJson}\n\n");
+                await response.Body.FlushAsync();
+            }
 
             var sourcesJson = System.Text.Json.JsonSerializer
                 .Serialize(
@@ -657,4 +707,67 @@ public class QnAService
             CreatedAt = DateTime.UtcNow
         };
     }
- }
+
+    public async Task<UserAnalyticsResponse>
+    GetAnalyticsAsync(Guid userId)
+    {
+        var now = DateTime.UtcNow;
+        var monthStart = new DateTime(now.Year, now.Month, 1);
+        var weekStart = now.AddDays(-7);
+        var last30Days = now.AddDays(-30);
+
+        var allMessages = await _db.ChatMessages
+            .Where(c => c.UserId == userId)
+            .Include(c => c.Document)
+            .ToListAsync();
+
+        var documents = await _db.Documents
+            .Where(d => d.UserId == userId)
+            .ToListAsync();
+
+        var dailyActivity = allMessages
+            .Where(m => m.CreatedAt >= last30Days)
+            .GroupBy(m => m.CreatedAt.Date)
+            .OrderBy(g => g.Key)
+            .Select(g => new DailyUsage
+            {
+                Date = g.Key.ToString("MMM dd"),
+                Questions = g.Count()
+            })
+            .ToList();
+
+        var topDocuments = allMessages
+            .Where(m => m.DocumentId.HasValue)
+            .GroupBy(m => m.DocumentId!.Value)
+            .Select(g => new TopDocument
+            {
+                DocumentId = g.Key,
+                DocumentName = g.First().Document
+                    ?.OriginalFileName ?? "Unknown",
+                QuestionCount = g.Count()
+            })
+            .OrderByDescending(d => d.QuestionCount)
+            .Take(5)
+            .ToList();
+
+        return new UserAnalyticsResponse
+        {
+            TotalQuestions = allMessages.Count,
+            QuestionsThisMonth = allMessages
+                .Count(m => m.CreatedAt >= monthStart),
+            QuestionsThisWeek = allMessages
+                .Count(m => m.CreatedAt >= weekStart),
+            DocumentAnswers = allMessages
+                .Count(m => m.AnswerSource == "document"),
+            AiFallbackAnswers = allMessages
+                .Count(m => m.AnswerSource == "ai_fallback"),
+            TotalDocuments = documents.Count,
+            ReadyDocuments = documents
+                .Count(d => d.Status == "ready"),
+            TotalStorageBytes = documents
+                .Sum(d => d.FileSizeBytes),
+            DailyActivity = dailyActivity,
+            TopDocuments = topDocuments
+        };
+    }
+}

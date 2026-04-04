@@ -31,6 +31,7 @@ import { documentApi } from "../api/documentApi";
 import type {
   ChatBubble,
   DocumentListResponse,
+  ImageSourceChunk,
   SourceChunk,
   ChatHistoryItem,
 } from "../types";
@@ -63,6 +64,7 @@ import {
 import usePageTitle from "../hooks/usePageTitle";
 import VoiceInput from "../components/VoiceInput";
 import { exportAsMarkdown, exportAsPDF } from "../utils/exportChat";
+import ImageSourceViewer from "../components/ImageSourceViewer";
 
 const ChatPage = () => {
   const { documentId } = useParams<{ documentId: string }>();
@@ -242,6 +244,15 @@ const ChatPage = () => {
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === assistantId ? { ...msg, sources } : msg,
+          ),
+        );
+      },
+
+      // onImageSources — attach image sources to the assistant bubble
+      (imageSources: ImageSourceChunk[]) => {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantId ? { ...msg, imageSources } : msg,
           ),
         );
       },
@@ -556,9 +567,11 @@ const ChatPage = () => {
                             />
                           )}
                         </MarkdownContent>
-                        {msg.sources && msg.sources.length > 0 && (
-                          <SourceViewer sources={msg.sources} />
-                        )}
+                        {Array.isArray(msg.sources) &&
+                          msg.sources.length > 0 && (
+                            <SourceViewer sources={msg.sources} />
+                          )}
+                        <ImageSourceViewer imageSources={msg.imageSources} />
                       </AssistantBubbleDocument>
                     )}
                   </AnswerContainer>

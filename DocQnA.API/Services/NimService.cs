@@ -293,9 +293,89 @@ public class NimService
                 Score = 1.0f - (i * 0.05f)
             })
             .ToList();
+
+    // ── Vision — Describe Image ───────────────────────────────────
+    public async Task<string> DescribeImageAsync(
+        string base64Image,
+        string mediaType = "image/jpeg",
+        string? contextHint = null)
+    {
+        var apiKey = _config["Nvidianim:ApiKey"]!;
+        var visionModel = _config["Nvidianim:VisionModel"]
+            ?? "meta/llama-3.2-11b-vision-instruct";
+
+        var prompt = contextHint != null
+            ? $"Describe this image in detail. It is from a document about '{contextHint}'. Focus on any text, charts, diagrams, tables, numbers or important visual information."
+            : "Describe this image in detail. Focus on any text, charts, diagrams, tables, numbers or important visual information.";
+
+        var requestBody = new
+        {
+            model = visionModel,
+            messages = new[]
+            {
+            new
+            {
+                role = "user",
+                content = new object[]
+                {
+                    new
+                    {
+                        type = "image_url",
+                        image_url = new
+                        {
+                            url = $"data:{mediaType};base64,{base64Image}"
+                        }
+                    },
+                    new { type = "text", text = prompt }
+                }
+            }
+        },
+            max_tokens = 512,
+            temperature = 0.2
+        };
+
+        var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            "https://integrate.api.nvidia.com/v1/chat/completions");
+
+        request.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", apiKey);
+
+        request.Content = new StringContent(
+            JsonSerializer.Serialize(requestBody),
+            Encoding.UTF8,
+            "application/json");
+
+        try
+        {
+            var response = await _httpClient.SendAsync(request);
+            var body = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "Vision API error {Status}: {Body}",
+                    response.StatusCode, body);
+                return string.Empty;
+            }
+
+            var result = JsonSerializer.Deserialize<NimChatResponse>(
+                body,
+                new JsonSerializerOptions
+                { PropertyNameCaseInsensitive = true });
+
+            return result?.Choices?[0]?.Message?.Content
+                ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Vision description failed");
+            return string.Empty;
+        }
+    }
 }
-    // ── Response Models ───────────────────────────────────────────
-    public class NimEmbeddingResponse
+// ── Response Models ───────────────────────────────────────────
+public class NimEmbeddingResponse
 {
     public List<NimEmbeddingData> Data { get; set; } = new();
 }

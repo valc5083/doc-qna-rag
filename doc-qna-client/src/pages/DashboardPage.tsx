@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { History, Folder, AdminPanelSettings } from "@mui/icons-material";
+import {
+  History,
+  Folder,
+  AdminPanelSettings,
+  TrendingUp,
+} from "@mui/icons-material";
 import { useAuthStore } from "../store/authStore";
 import { authApi } from "../api/authApi";
 import { documentApi } from "../api/documentApi";
@@ -107,6 +112,13 @@ const DashboardPage = () => {
           )}
           <NavCollectionButton
             variant="outlined"
+            startIcon={<TrendingUp />}
+            onClick={() => navigate("/analytics")}
+          >
+            Analytics
+          </NavCollectionButton>
+          <NavCollectionButton
+            variant="outlined"
             size="small"
             startIcon={<Folder />}
             onClick={() => navigate("/collections")}
@@ -121,7 +133,11 @@ const DashboardPage = () => {
           >
             History
           </NavHistoryButton>
-          <NavLogoutButton variant="outlined" size="small" onClick={handleLogout}>
+          <NavLogoutButton
+            variant="outlined"
+            size="small"
+            onClick={handleLogout}
+          >
             Logout
           </NavLogoutButton>
         </NavActions>

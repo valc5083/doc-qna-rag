@@ -216,6 +216,131 @@ public class QdrantService
 
         return response.IsSuccessStatusCode;
     }
+
+    // ── Create Image Collection ───────────────────────────────────
+    public async Task CreateImageCollectionAsync(
+        string collectionName)
+    {
+        var imgCollection = collectionName + "_img";
+        if (await CollectionExistsAsync(imgCollection)) return;
+
+        var body = JsonSerializer.Serialize(new
+        {
+            vectors = new { size = _vectorSize, distance = "Cosine" }
+        });
+
+        var response = await _httpClient.PutAsync(
+            $"/collections/{imgCollection}",
+            new StringContent(body, Encoding.UTF8,
+                "application/json"));
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            _logger.LogWarning(
+                "Failed to create image collection: {C}", content);
+            return;
+        }
+
+        _logger.LogInformation(
+            "Created image collection: {Name}", imgCollection);
+    }
+
+    // ── Upsert Image Vectors ──────────────────────────────────────
+    public async Task UpsertImageVectorsAsync(
+        string collectionName,
+        List<(string Id, List<float> Vector, string Description,
+            int PageNumber, int ImageIndex,
+            string Base64Data)> points)
+    {
+        var imgCollection = collectionName + "_img";
+
+        var payload = new
+        {
+            points = points.Select(p => new
+            {
+                id = p.Id,
+                vector = p.Vector,
+                payload = new
+                {
+                    description = p.Description,
+                    page_number = p.PageNumber,
+                    image_index = p.ImageIndex,
+                    base64_data = p.Base64Data
+                }
+            }).ToList()
+        };
+
+        var body = JsonSerializer.Serialize(payload);
+        var response = await _httpClient.PutAsync(
+            $"/collections/{imgCollection}/points",
+            new StringContent(body, Encoding.UTF8,
+                "application/json"));
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            _logger.LogWarning(
+                "Failed to upsert image vectors: {C}", content);
+            return;
+        }
+
+        _logger.LogInformation(
+            "Upserted {Count} image vectors", points.Count);
+    }
+
+    // ── Search Image Collection ───────────────────────────────────
+    public async Task<List<(string Description, float Score,
+        int PageNumber, int ImageIndex, string Base64Data)>>
+        SearchImagesAsync(
+            string collectionName,
+            List<float> queryVector,
+            int topK = 2,
+            float scoreThreshold = 0.30f)
+    {
+        var imgCollection = collectionName + "_img";
+
+        if (!await CollectionExistsAsync(imgCollection))
+            return new List<(string, float, int, int, string)>();
+
+        var payload = new
+        {
+            vector = queryVector,
+            limit = topK,
+            score_threshold = scoreThreshold,
+            with_payload = true
+        };
+
+        var body = JsonSerializer.Serialize(payload);
+        var response = await _httpClient.PostAsync(
+            $"/collections/{imgCollection}/points/search",
+            new StringContent(body, Encoding.UTF8,
+                "application/json"));
+
+        var content = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+            return new List<(string, float, int, int, string)>();
+
+        var result = JsonSerializer.Deserialize<QdrantImageSearchResponse>(
+            content,
+            new JsonSerializerOptions
+            { PropertyNameCaseInsensitive = true });
+
+        return result?.Result?.Select(r => (
+            Description: r.Payload?.Description ?? "",
+            Score: r.Score,
+            PageNumber: r.Payload?.PageNumber ?? 0,
+            ImageIndex: r.Payload?.ImageIndex ?? 0,
+            Base64Data: r.Payload?.Base64Data ?? ""
+        )).ToList()
+        ?? new List<(string, float, int, int, string)>();
+    }
+
+    // ── Delete Image Collection ───────────────────────────────────
+    public async Task DeleteImageCollectionAsync(
+        string collectionName)
+        => await DeleteCollectionAsync(collectionName + "_img");
 }
 
 // ── Response Models ───────────────────────────────────────────
@@ -236,4 +361,28 @@ public class QdrantPayload
 
     [JsonPropertyName("chunk_index")]
     public int ChunkIndex { get; set; }
+}
+public class QdrantImageSearchResponse
+{
+    public List<QdrantImageSearchResult>? Result { get; set; }
+}
+
+public class QdrantImageSearchResult
+{
+    public float Score { get; set; }
+    public QdrantImagePayload? Payload { get; set; }
+}
+
+public class QdrantImagePayload
+{
+    public string? Description { get; set; }
+
+    [JsonPropertyName("page_number")]
+    public int PageNumber { get; set; }
+
+    [JsonPropertyName("image_index")]
+    public int ImageIndex { get; set; }
+
+    [JsonPropertyName("base64_data")]
+    public string? Base64Data { get; set; }
 }

@@ -160,6 +160,9 @@ namespace DocQnA.API.Services
                 await _qdrantService.DeleteCollectionAsync(
                     document.QdrantCollectionName);
 
+                await _qdrantService.DeleteImageCollectionAsync(
+                    document.QdrantCollectionName);
+
                 _logger.LogInformation(
                     "Deleted Qdrant collection {Collection} for doc {DocId}",
                     document.QdrantCollectionName, documentId);

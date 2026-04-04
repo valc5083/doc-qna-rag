@@ -45,11 +45,12 @@ export interface AskRequest {
 
 export interface AskResponse {
   answer: string;
+  answerSource: 'document' | 'ai_fallback';
   createdAt: string;
+  fallbackReason?: string;
+  imageSources?: ImageSourceChunk[];
   question: string;
   sources: SourceChunk[];
-  answerSource: 'document' | 'ai_fallback';
-  fallbackReason?: string;
 }
 
 export interface ChatHistoryItem {
@@ -65,13 +66,14 @@ export interface ChatHistoryItem {
 }
 
 export interface ChatBubble {
+  answerSource?: 'document' | 'ai_fallback';
   content: string;
   createdAt: string;
+  fallbackReason?: string;
   id: string;
+  imageSources?: ImageSourceChunk[];
   sources?: SourceChunk[];
   type: "user" | "assistant";
-  answerSource?: 'document' | 'ai_fallback';
-  fallbackReason?: string;
 }
 
 export interface CollectionDocumentResponse {
@@ -160,4 +162,36 @@ export interface CollectionAskResponse {
   documentsSearched: number;
   question: string;
   sources: CollectionSourceChunk[];
+}
+
+export interface DailyUsage {
+  date: string;
+  questions: number;
+}
+
+export interface TopDocument {
+  documentId: string;
+  documentName: string;
+  questionCount: number;
+}
+
+export interface UserAnalytics {
+  aiFallbackAnswers: number;
+  dailyActivity: DailyUsage[];
+  documentAnswers: number;
+  questionsThisMonth: number;
+  questionsThisWeek: number;
+  readyDocuments: number;
+  topDocuments: TopDocument[];
+  totalDocuments: number;
+  totalQuestions: number;
+  totalStorageBytes: number;
+}
+
+export interface ImageSourceChunk {
+  base64Data: string;
+  description: string;
+  imageIndex: number;
+  pageNumber: number;
+  score: number;
 }

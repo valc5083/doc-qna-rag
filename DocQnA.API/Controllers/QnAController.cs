@@ -117,4 +117,12 @@ public class QnAController : ControllerBase
             return NotFound(new { message = ex.Message });
         }
     }
+
+    [HttpGet("analytics")]
+    public async Task<IActionResult> GetAnalytics()
+    {
+        var userId = User.GetUserId();
+        var analytics = await _qnAService.GetAnalyticsAsync(userId);
+        return Ok(analytics);
+    }
 }

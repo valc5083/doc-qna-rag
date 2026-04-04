@@ -49,6 +49,9 @@ builder.Services.AddScoped<AdminService>();
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
 
+// Image extraction service
+builder.Services.AddScoped<ImageExtractorService>();
+
 // Redis — optional, graceful if not configured
 var redisConnectionString =
     builder.Configuration["Redis:ConnectionString"];
