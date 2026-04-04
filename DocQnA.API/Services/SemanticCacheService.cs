@@ -1,5 +1,7 @@
 ﻿using DocQnA.API.DTOs;
 using StackExchange.Redis;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace DocQnA.API.Services;
@@ -55,7 +57,7 @@ public class SemanticCacheService
 
             // Get cached answer from Redis
             var cacheKey =
-                $"answer:{documentId}:{topResult.ChunkIndex}";
+                $"answer:{documentId}:{QuestionCacheKey(topResult.Text)}";
             var cached = await _redis.StringGetAsync(cacheKey);
 
             if (!cached.HasValue) return null;
@@ -106,9 +108,9 @@ public class SemanticCacheService
             if (!exists)
                 await _qdrant.CreateCollectionAsync(cacheCollection);
 
-            // Store question embedding with a unique index
-            var questionIndex = Math.Abs(question.GetHashCode());
-
+            // Store question embedding; ChunkIndex is unused for key
+            // derivation — the Redis key is derived from the SHA256 of
+            // the question text stored in the Qdrant payload.
             await _qdrant.UpsertVectorsAsync(
                 cacheCollection,
                 new List<(string, List<float>, string, int)>
@@ -117,13 +119,13 @@ public class SemanticCacheService
                         Guid.NewGuid().ToString(),
                         questionEmbedding,
                         question,
-                        questionIndex
+                        0
                     )
                 });
 
             // Store answer in Redis with TTL
             var cacheKey =
-                $"answer:{documentId}:{questionIndex}";
+                $"answer:{documentId}:{QuestionCacheKey(question)}";
 
             var cachedAnswer = new CachedAnswer
             {
@@ -164,6 +166,17 @@ public class SemanticCacheService
         {
             _logger.LogWarning(ex, "Cache invalidation failed");
         }
+    }
+
+    /// <summary>
+    /// Returns a collision-resistant, deterministic hex key derived from
+    /// the SHA256 hash of the question text. Safe against GetHashCode()
+    /// collisions and the Math.Abs(int.MinValue) edge case.
+    /// </summary>
+    private static string QuestionCacheKey(string question)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(question));
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 }
 
