@@ -58,26 +58,30 @@ var redisConnectionString =
 
 if (!string.IsNullOrEmpty(redisConnectionString))
 {
-    try
+    builder.Services.AddScoped<SemanticCacheService>(sp =>
     {
-        builder.Services.AddSingleton<IConnectionMultiplexer>(
-            ConnectionMultiplexer.Connect(
-                redisConnectionString));
-        builder.Services.AddScoped<SemanticCacheService>();
-        Log.Information("Redis connected for semantic caching");
-    }
-    catch (Exception ex)
-    {
-        Log.Warning(ex,
-            "Redis connection failed — caching disabled");
-        builder.Services
-            .AddScoped<SemanticCacheService>(sp =>
-                new SemanticCacheService(
-                    null,
-                    sp.GetRequiredService<QdrantService>(),
-                    sp.GetRequiredService<IConfiguration>(),
-                    sp.GetRequiredService<ILogger<SemanticCacheService>>()));
-    }
+        IConnectionMultiplexer? redis = null;
+
+        try
+        {
+            redis = ConnectionMultiplexer
+                .ConnectAsync(redisConnectionString)
+                .GetAwaiter()
+                .GetResult();
+            Log.Information("Redis connected for semantic caching");
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex,
+                "Redis connection failed — caching disabled");
+        }
+
+        return new SemanticCacheService(
+            redis,
+            sp.GetRequiredService<QdrantService>(),
+            sp.GetRequiredService<IConfiguration>(),
+            sp.GetRequiredService<ILogger<SemanticCacheService>>());
+    });
 }
 else
 {
