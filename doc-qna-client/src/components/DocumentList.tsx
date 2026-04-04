@@ -21,6 +21,7 @@ import {
   EmptyStateBox,
   SectionTitle,
 } from "./styles/DocumentStyles";
+import DocumentCardPreview from "./DocumentCardPreview";
 import ConfirmationDialog from "./ConfirmationDialog";
 
 interface Props {
@@ -105,7 +106,11 @@ const DocumentList = ({ documents, onDelete, onRefresh }: Props) => {
         documents.map((doc) => (
           <DocumentCard key={doc.id}>
             <DocumentInfo>
-              <PictureAsPdf sx={{ color: "#e53935", fontSize: 32 }} />
+              <DocumentCardPreview
+                fileName={doc.originalFileName}
+                chunkCount={doc.chunkCount}
+                fileSizeBytes={doc.fileSizeBytes}
+              />
               <Box sx={{ minWidth: 0, flex: 1 }}>
                 <DocumentName>{doc.originalFileName}</DocumentName>
                 <DocumentMeta>

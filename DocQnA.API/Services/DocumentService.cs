@@ -12,17 +12,19 @@ namespace DocQnA.API.Services
         private readonly IngestionService _ingestionService;
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly QdrantService _qdrantService;
+        private readonly SemanticCacheService? _cache;
 
         //Max file size in bytes (e.g., 50 MB)
         private const long MaxFileSizeBytes = 50 * 1024 * 1024;
 
-        public DocumentService(AppDbContext db, ILogger<DocumentService> logger, IngestionService ingestionService, IServiceScopeFactory scopeFactory, QdrantService qdrantService)
+        public DocumentService(AppDbContext db, ILogger<DocumentService> logger, IngestionService ingestionService, IServiceScopeFactory scopeFactory, QdrantService qdrantService, SemanticCacheService? cache)
         {
             _db = db;
             _logger = logger;
             _ingestionService = ingestionService;
             _scopeFactory = scopeFactory;
             _qdrantService = qdrantService;
+            _cache = cache;
         }
 
         public async Task<DocumentUploadResponse> UploadAsync(IFormFile file, Guid userId)
@@ -158,6 +160,9 @@ namespace DocQnA.API.Services
                 await _qdrantService.DeleteCollectionAsync(
                     document.QdrantCollectionName);
 
+                await _qdrantService.DeleteImageCollectionAsync(
+                    document.QdrantCollectionName);
+
                 _logger.LogInformation(
                     "Deleted Qdrant collection {Collection} for doc {DocId}",
                     document.QdrantCollectionName, documentId);
@@ -169,6 +174,9 @@ namespace DocQnA.API.Services
                     document.QdrantCollectionName);
                 // Don't block deletion if Qdrant fails
             }
+
+            if (_cache != null)
+                await _cache.InvalidateCacheAsync(documentId);
 
             // ── Delete chat messages for this document ─────────────
             var chatMessages = await _db.ChatMessages

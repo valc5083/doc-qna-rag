@@ -1,4 +1,3 @@
-using System.Text;
 using DocQnA.API.Infrastructure;
 using DocQnA.API.Middleware;
 using DocQnA.API.Services;
@@ -11,6 +10,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using StackExchange.Redis;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,6 +48,51 @@ builder.Services.AddScoped<AdminService>();
 // ── FluentValidation ──────────────────────────────────────────
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
+
+// Image extraction service
+builder.Services.AddScoped<ImageExtractorService>();
+
+// Redis — optional, graceful if not configured
+var redisConnectionString =
+    builder.Configuration["Redis:ConnectionString"];
+
+if (!string.IsNullOrEmpty(redisConnectionString))
+{
+    builder.Services.AddScoped<SemanticCacheService>(sp =>
+    {
+        IConnectionMultiplexer? redis = null;
+
+        try
+        {
+            redis = ConnectionMultiplexer
+                .ConnectAsync(redisConnectionString)
+                .GetAwaiter()
+                .GetResult();
+            Log.Information("Redis connected for semantic caching");
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex,
+                "Redis connection failed — caching disabled");
+        }
+
+        return new SemanticCacheService(
+            redis,
+            sp.GetRequiredService<QdrantService>(),
+            sp.GetRequiredService<IConfiguration>(),
+            sp.GetRequiredService<ILogger<SemanticCacheService>>());
+    });
+}
+else
+{
+    // Register without Redis — cache always misses gracefully
+    builder.Services.AddScoped<SemanticCacheService>(sp =>
+        new SemanticCacheService(
+            null,
+            sp.GetRequiredService<QdrantService>(),
+            sp.GetRequiredService<IConfiguration>(),
+            sp.GetRequiredService<ILogger<SemanticCacheService>>()));
+}
 
 // ── JWT Authentication ────────────────────────────────────────
 var jwtKey = builder.Configuration["Jwt:SecretKey"]!;

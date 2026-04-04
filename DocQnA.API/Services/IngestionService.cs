@@ -1,4 +1,5 @@
 ﻿using DocQnA.API.Infrastructure;
+using DocQnA.API.Models;
 
 namespace DocQnA.API.Services;
 
@@ -10,6 +11,7 @@ public class IngestionService
     private readonly NimService _nimService;
     private readonly QdrantService _qdrantService;
     private readonly ILogger<IngestionService> _logger;
+    private readonly ImageExtractorService _imageExtractor;
 
     public IngestionService(
         AppDbContext db,
@@ -17,7 +19,9 @@ public class IngestionService
         TextChunkerService chunker,
         NimService nimService,
         QdrantService qdrantService,
-        ILogger<IngestionService> logger)
+        ILogger<IngestionService> logger,
+        ImageExtractorService imageExtractor
+        )
     {
         _db = db;
         _pdfExtractor = pdfExtractor;
@@ -25,6 +29,7 @@ public class IngestionService
         _nimService = nimService;
         _qdrantService = qdrantService;
         _logger = logger;
+        _imageExtractor = imageExtractor;
     }
 
     public async Task IngestFromFileAsync(Guid documentId, string filePath)
@@ -122,7 +127,86 @@ public class IngestionService
             await _qdrantService.UpsertVectorsAsync(
                 document.QdrantCollectionName, points);
 
-            // ── Step 6: Update document status ─────────────────
+            // ── Step 6: Extract + embed images ────────────────────────────
+            _logger.LogInformation(
+                "[{DocId}] Step 6: Extracting images...", documentId);
+
+            await _qdrantService.CreateImageCollectionAsync(
+                document.QdrantCollectionName);
+
+            pdfStream.Position = 0;
+            var images = _imageExtractor.ExtractImages(pdfStream);
+
+            if (images.Count > 0)
+            {
+                _logger.LogInformation(
+                    "[{DocId}] Describing {Count} images via vision AI...",
+                    documentId, images.Count);
+
+                var imagePoints = new List<(string Id, List<float> Vector,
+                    string Description, int PageNumber,
+                    int ImageIndex, Guid ImageId)>();
+
+                foreach (var image in images)
+                {
+                    try
+                    {
+                        var description = await _nimService.DescribeImageAsync(
+                            image.Base64Data,
+                            image.MediaType,
+                            contextHint: document.OriginalFileName);
+
+                        if (string.IsNullOrWhiteSpace(description))
+                            continue;
+
+                        var embedding = await _nimService
+                            .GetEmbeddingAsync(description);
+
+                        // ── Save image binary to DB ────────────────────
+                        var dbImage = new DocumentImage
+                        {
+                            DocumentId = documentId,
+                            PageNumber = image.PageNumber,
+                            ImageIndex = image.ImageIndex,
+                            Base64Data = image.Base64Data,
+                            MediaType = image.MediaType
+                        };
+                        _db.DocumentImages.Add(dbImage);
+                        await _db.SaveChangesAsync();
+
+                        imagePoints.Add((
+                            Id: Guid.NewGuid().ToString(),
+                            Vector: embedding,
+                            Description: description,
+                            PageNumber: image.PageNumber,
+                            ImageIndex: image.ImageIndex,
+                            ImageId: dbImage.Id
+                        ));
+
+                        _logger.LogInformation(
+                            "[{DocId}] Described image {I} on page {P}",
+                            documentId, image.ImageIndex, image.PageNumber);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex,
+                            "[{DocId}] Failed image {I}",
+                            documentId, image.ImageIndex);
+                    }
+                }
+
+                if (imagePoints.Count > 0)
+                {
+                    await _qdrantService.UpsertImageVectorsAsync(
+                        document.QdrantCollectionName, imagePoints);
+
+                    _logger.LogInformation(
+                        "[{DocId}] Stored {Count} image vectors",
+                        documentId, imagePoints.Count);
+                }
+            }
+
+            // ── Step 7: Update document status ─────────────────
             document.ChunkCount = chunks.Count;
             document.Status = "ready";
             await _db.SaveChangesAsync();

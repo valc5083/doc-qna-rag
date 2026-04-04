@@ -6,7 +6,9 @@ import type {
   AskResponse,
   ChatHistoryItem,
   CollectionAskResponse,
+  ImageSourceChunk,
   SourceChunk,
+  UserAnalytics,
 } from "../types";
 
 export const qnaApi = {
@@ -22,6 +24,7 @@ export const qnaApi = {
     token: string,
     onToken: (token: string) => void,
     onSources: (sources: SourceChunk[]) => void,
+    onImageSources: (imageSources: ImageSourceChunk[]) => void,
     onMetadata: (
       answerSource: "document" | "ai_fallback",
       fallbackReason?: string,
@@ -80,6 +83,13 @@ export const qnaApi = {
       eventSource.close();
     });
 
+    eventSource.addEventListener("image_sources", (e) => {
+      try {
+        const imageSources = JSON.parse((e as MessageEvent).data);
+        onImageSources?.(imageSources);
+      } catch {}
+    });
+
     eventSource.onerror = () => {
       eventSource.close();
       onDone();
@@ -111,5 +121,10 @@ export const qnaApi = {
 
   deleteOne: async (id: string): Promise<void> => {
     await api.delete(`/qna/history/${id}`);
+  },
+
+  getAnalytics: async (): Promise<UserAnalytics> => {
+    const res = await api.get<UserAnalytics>("/qna/analytics");
+    return res.data;
   },
 };

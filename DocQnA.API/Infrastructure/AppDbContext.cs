@@ -13,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<Collection> Collections => Set<Collection>();           // ← add
     public DbSet<CollectionDocument> CollectionDocuments               // ← add
         => Set<CollectionDocument>();
+    public DbSet<DocumentImage> DocumentImages => Set<DocumentImage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -63,6 +64,13 @@ public class AppDbContext : DbContext
             .HasOne(cd => cd.Document)
             .WithMany()
             .HasForeignKey(cd => cd.DocumentId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // ── DocumentImage ───────────────────────────────────────
+        modelBuilder.Entity<DocumentImage>()
+            .HasOne(i => i.Document)
+            .WithMany()
+            .HasForeignKey(i => i.DocumentId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }
