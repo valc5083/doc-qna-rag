@@ -22,6 +22,8 @@ public class AskResponse
     public DateTime CreatedAt { get; set; }
     public string AnswerSource { get; set; } = "document"; // "document" or "ai_fallback"
     public string? FallbackReason { get; set; } // Why fallback was used
+    public bool FromCache { get; set; }
+    public float CacheSimilarity { get; set; }
 }
 
 public class ChatHistoryResponse

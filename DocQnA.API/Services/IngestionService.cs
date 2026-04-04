@@ -1,4 +1,5 @@
 ﻿using DocQnA.API.Infrastructure;
+using DocQnA.API.Models;
 
 namespace DocQnA.API.Services;
 
@@ -144,7 +145,7 @@ public class IngestionService
 
                 var imagePoints = new List<(string Id, List<float> Vector,
                     string Description, int PageNumber,
-                    int ImageIndex, string Base64Data)>();
+                    int ImageIndex, Guid ImageId)>();
 
                 foreach (var image in images)
                 {
@@ -161,13 +162,25 @@ public class IngestionService
                         var embedding = await _nimService
                             .GetEmbeddingAsync(description);
 
+                        // ── Save image binary to DB ────────────────────
+                        var dbImage = new DocumentImage
+                        {
+                            DocumentId = documentId,
+                            PageNumber = image.PageNumber,
+                            ImageIndex = image.ImageIndex,
+                            Base64Data = image.Base64Data,
+                            MediaType = image.MediaType
+                        };
+                        _db.DocumentImages.Add(dbImage);
+                        await _db.SaveChangesAsync();
+
                         imagePoints.Add((
                             Id: Guid.NewGuid().ToString(),
                             Vector: embedding,
                             Description: description,
                             PageNumber: image.PageNumber,
                             ImageIndex: image.ImageIndex,
-                            Base64Data: image.Base64Data
+                            ImageId: dbImage.Id
                         ));
 
                         _logger.LogInformation(

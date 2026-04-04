@@ -92,6 +92,7 @@ public class SemanticCacheService
         List<float> questionEmbedding,
         string answer,
         List<SourceChunk> sources,
+        List<ImageSourceChunk> imageSources,
         Guid documentId,
         string answerSource)
     {
@@ -131,14 +132,23 @@ public class SemanticCacheService
             {
                 Answer = answer,
                 Sources = sources,
+                ImageSources = imageSources,
                 AnswerSource = answerSource,
                 CachedAt = DateTime.UtcNow
             };
 
+            var ttl = TimeSpan.FromHours(_cacheTtlHours);
+
             await _redis.StringSetAsync(
                 cacheKey,
                 JsonSerializer.Serialize(cachedAnswer),
-                TimeSpan.FromHours(_cacheTtlHours));
+                ttl);
+
+            // Track the key in a per-document set so InvalidateCacheAsync
+            // can delete it eagerly without waiting for TTL expiry.
+            var keySetKey = $"cache_keys:{documentId}";
+            await _redis.SetAddAsync(keySetKey, cacheKey);
+            await _redis.KeyExpireAsync(keySetKey, ttl);
 
             _logger.LogInformation(
                 "💾 Cached answer for '{Question}'", question);
@@ -156,9 +166,28 @@ public class SemanticCacheService
 
         try
         {
+            // Delete all tracked Redis answer keys for this document
+            var keySetKey = $"cache_keys:{documentId}";
+            var members = await _redis.SetMembersAsync(keySetKey);
+            if (members.Length > 0)
+            {
+                var keysToDelete = members
+                    .Select(m => (RedisKey)(m.ToString() ?? string.Empty))
+                    .Where(k => k != string.Empty)
+                    .Append((RedisKey)keySetKey)
+                    .ToArray();
+                await _redis.KeyDeleteAsync(keysToDelete);
+            }
+            else
+            {
+                await _redis.KeyDeleteAsync(keySetKey);
+            }
+
+            // Delete the Qdrant cache collection
             var cacheCollection =
                 CacheCollectionPrefix + documentId.ToString("N");
             await _qdrant.DeleteCollectionAsync(cacheCollection);
+
             _logger.LogInformation(
                 "Cache invalidated for document {DocId}", documentId);
         }
@@ -184,6 +213,7 @@ public class CachedAnswer
 {
     public string Answer { get; set; } = string.Empty;
     public List<SourceChunk> Sources { get; set; } = new();
+    public List<ImageSourceChunk> ImageSources { get; set; } = new();
     public string AnswerSource { get; set; } = "document";
     public DateTime CachedAt { get; set; }
     public bool FromCache { get; set; }

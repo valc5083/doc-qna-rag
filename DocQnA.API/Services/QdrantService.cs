@@ -251,7 +251,7 @@ public class QdrantService
         string collectionName,
         List<(string Id, List<float> Vector, string Description,
             int PageNumber, int ImageIndex,
-            string Base64Data)> points)
+            Guid ImageId)> points)
     {
         var imgCollection = collectionName + "_img";
 
@@ -266,7 +266,7 @@ public class QdrantService
                     description = p.Description,
                     page_number = p.PageNumber,
                     image_index = p.ImageIndex,
-                    base64_data = p.Base64Data
+                    image_id = p.ImageId.ToString()
                 }
             }).ToList()
         };
@@ -291,7 +291,7 @@ public class QdrantService
 
     // ── Search Image Collection ───────────────────────────────────
     public async Task<List<(string Description, float Score,
-        int PageNumber, int ImageIndex, string Base64Data)>>
+        int PageNumber, int ImageIndex, Guid ImageId)>>
         SearchImagesAsync(
             string collectionName,
             List<float> queryVector,
@@ -301,7 +301,7 @@ public class QdrantService
         var imgCollection = collectionName + "_img";
 
         if (!await CollectionExistsAsync(imgCollection))
-            return new List<(string, float, int, int, string)>();
+            return new List<(string, float, int, int, Guid)>();
 
         var payload = new
         {
@@ -320,7 +320,7 @@ public class QdrantService
         var content = await response.Content.ReadAsStringAsync();
 
         if (!response.IsSuccessStatusCode)
-            return new List<(string, float, int, int, string)>();
+            return new List<(string, float, int, int, Guid)>();
 
         var result = JsonSerializer.Deserialize<QdrantImageSearchResponse>(
             content,
@@ -332,9 +332,9 @@ public class QdrantService
             Score: r.Score,
             PageNumber: r.Payload?.PageNumber ?? 0,
             ImageIndex: r.Payload?.ImageIndex ?? 0,
-            Base64Data: r.Payload?.Base64Data ?? ""
+            ImageId: Guid.TryParse(r.Payload?.ImageId, out var id) ? id : Guid.Empty
         )).ToList()
-        ?? new List<(string, float, int, int, string)>();
+        ?? new List<(string, float, int, int, Guid)>();
     }
 
     // ── Delete Image Collection ───────────────────────────────────
@@ -383,6 +383,6 @@ public class QdrantImagePayload
     [JsonPropertyName("image_index")]
     public int ImageIndex { get; set; }
 
-    [JsonPropertyName("base64_data")]
-    public string? Base64Data { get; set; }
+    [JsonPropertyName("image_id")]
+    public string? ImageId { get; set; }
 }

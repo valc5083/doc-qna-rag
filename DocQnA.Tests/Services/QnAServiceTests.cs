@@ -370,11 +370,13 @@ public class QnAServiceTests : IDisposable
             new AskRequest { Question = "What is this?", DocumentId = docId },
             userId);
 
-        result.Answer.Should().Contain("Cached answer text");
+        result.Answer.Should().Be("Cached answer text");
         result.Sources.Should().HaveCount(1);
         result.Sources[0].Text.Should().Be("source text");
         result.AnswerSource.Should().Be("document");
-        // Cache hit path does not populate ImageSources
+        result.FromCache.Should().BeTrue();
+        result.CacheSimilarity.Should().BeApproximately(0.97f, 0.001f);
+        // No images stored in this cached answer
         result.ImageSources.Should().BeEmpty();
         fakeCache.CacheAnswerWasCalled.Should().BeFalse();
     }
@@ -436,6 +438,7 @@ public class QnAServiceTests : IDisposable
             List<float> questionEmbedding,
             string answer,
             List<SourceChunk> sources,
+            List<ImageSourceChunk> imageSources,
             Guid documentId,
             string answerSource)
         {

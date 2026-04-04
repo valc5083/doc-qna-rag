@@ -69,11 +69,13 @@ public class QnAService
                 return new AskResponse
                 {
                     Question = request.Question,
-                    Answer = cached.Answer +
-                        "\n\n*⚡ Answered from cache*",
+                    Answer = cached.Answer,
                     Sources = cached.Sources,
+                    ImageSources = cached.ImageSources,
                     CreatedAt = DateTime.UtcNow,
-                    AnswerSource = cached.AnswerSource
+                    AnswerSource = cached.AnswerSource,
+                    FromCache = true,
+                    CacheSimilarity = cached.CacheSimilarity
                 };
             }
         }
@@ -141,10 +143,30 @@ public class QnAService
             topK: 2,
             scoreThreshold: 0.30f);
 
+        // Fetch base64 data from DB for matched images
+        var imageIds = imageResults
+            .Where(r => r.ImageId != Guid.Empty)
+            .Select(r => r.ImageId)
+            .ToList();
+        var imageDataMap = imageIds.Count > 0
+            ? await _db.DocumentImages
+                .Where(i => imageIds.Contains(i.Id))
+                .ToDictionaryAsync(i => i.Id, i => i.Base64Data)
+            : new Dictionary<Guid, string>();
+
+        var imageSources = imageResults.Select(r => new ImageSourceChunk
+        {
+            Description = r.Description,
+            Score = r.Score,
+            PageNumber = r.PageNumber,
+            ImageIndex = r.ImageIndex,
+            Base64Data = imageDataMap.GetValueOrDefault(r.ImageId, string.Empty)
+        }).ToList();
+
         // Include image descriptions in context
-        var imageContext = imageResults.Any()
+        var imageContext = imageSources.Any()
             ? "\n\n--- Visual Content ---\n" + string.Join("\n\n",
-                imageResults.Select((r, i) =>
+                imageSources.Select(r =>
                     $"[Image on page {r.PageNumber}]: {r.Description}"))
             : string.Empty;
 
@@ -207,13 +229,13 @@ public class QnAService
                                 comprehensive, accurate answers based on the provided context.
     
                                 Instructions:
-                                1. Carefully analyze ALL provide    d sources to extract relevant information
+                                1. Carefully analyze ALL provided sources to extract relevant information
                                 2. Synthesize information from multiple sources when applicable
                                 3. Use the conversation history to understand follow-up questions
                                 4. Provide detailed answers when the context supports it
                                 5. If information is partially available, provide what you can and note what's missing
                                 6. Only say you don't have enough information if the context is completely unrelated
-                                7. When citing sources, mention     which source number(s) you used
+                                7. When citing sources, mention which source number(s) you used
                                 8. Be thorough but concise - prioritize completeness over brevity
                                 """;
 
@@ -242,6 +264,7 @@ public class QnAService
                 questionVector,
                 answer,
                 sources,
+                imageSources,
                 document.Id,
                 "document");
         }
@@ -270,15 +293,7 @@ public class QnAService
             Question = request.Question,
             Answer = answer,
             Sources = sources,
-            ImageSources = imageResults.Select(r =>
-                new ImageSourceChunk
-                {
-                    Description = r.Description,
-                    Score = r.Score,
-                    PageNumber = r.PageNumber,
-                    ImageIndex = r.ImageIndex,
-                    Base64Data = r.Base64Data
-                }).ToList(),
+            ImageSources = imageSources,
             CreatedAt = chatMessage.CreatedAt,
             AnswerSource = useAiFallback ? "ai_fallback" : "document",
             FallbackReason = useAiFallback ? fallbackReason : null
@@ -382,20 +397,33 @@ public class QnAService
             }).ToList();
 
             var imageResults = await _qdrantService.SearchImagesAsync(
-    document.QdrantCollectionName,
-    questionVector, topK: 2, scoreThreshold: 0.30f);
+                document.QdrantCollectionName,
+                questionVector, topK: 2, scoreThreshold: 0.30f);
 
-            if (imageResults.Any())
+            // Fetch base64 data from DB for matched images
+            var imageIds = imageResults
+                .Where(r => r.ImageId != Guid.Empty)
+                .Select(r => r.ImageId)
+                .ToList();
+            var imageDataMap = imageIds.Count > 0
+                ? await _db.DocumentImages
+                    .Where(i => imageIds.Contains(i.Id))
+                    .ToDictionaryAsync(i => i.Id, i => i.Base64Data)
+                : new Dictionary<Guid, string>();
+
+            var imageSources = imageResults.Select(r => new ImageSourceChunk
+            {
+                Description = r.Description,
+                Score = r.Score,
+                PageNumber = r.PageNumber,
+                ImageIndex = r.ImageIndex,
+                Base64Data = imageDataMap.GetValueOrDefault(r.ImageId, string.Empty)
+            }).ToList();
+
+            if (imageSources.Any())
             {
                 var imgJson = System.Text.Json.JsonSerializer.Serialize(
-                    imageResults.Select(r => new
-                    {
-                        description = r.Description,
-                        score = r.Score,
-                        pageNumber = r.PageNumber,
-                        imageIndex = r.ImageIndex,
-                        base64Data = r.Base64Data
-                    }),
+                    imageSources,
                     new System.Text.Json.JsonSerializerOptions
                     {
                         PropertyNamingPolicy =
@@ -406,6 +434,13 @@ public class QnAService
                     $"event: image_sources\ndata: {imgJson}\n\n");
                 await response.Body.FlushAsync();
             }
+
+            // Image descriptions to include in the prompt context
+            var imageContext = imageSources.Any()
+                ? "\n\n--- Visual Content ---\n" + string.Join("\n\n",
+                    imageSources.Select(r =>
+                        $"[Image on page {r.PageNumber}]: {r.Description}"))
+                : string.Empty;
 
             var sourcesJson = System.Text.Json.JsonSerializer
                 .Serialize(
@@ -447,7 +482,8 @@ public class QnAService
                 // ── Document-Based Prompt ──────────────────────────
                 var context = string.Join("\n\n---\n\n",
                     rerankedResults.Select((r, i) =>
-                        $"[Source {i + 1}]\n{r.Text}"));
+                        $"[Source {i + 1}]\n{r.Text}"))
+                    + imageContext;
 
                 systemPrompt = """
                 You are an expert document assistant. Your task is to provide comprehensive, accurate answers based on the provided context.
@@ -478,7 +514,6 @@ public class QnAService
                             $"Assistant: {h.Answer[..Math.Min(300, h.Answer.Length)]}"))
                     : string.Empty;
 
-                // Then in userMessage for document-based path:
                 userMessage = $"""
                                 Context from document:
                                 {context}
@@ -716,56 +751,85 @@ public class QnAService
         var weekStart = now.AddDays(-7);
         var last30Days = now.AddDays(-30);
 
-        var allMessages = await _db.ChatMessages
+        // Push scalar counts into SQL
+        var totalQuestions = await _db.ChatMessages
             .Where(c => c.UserId == userId)
-            .Include(c => c.Document)
-            .ToListAsync();
+            .CountAsync();
 
-        var documents = await _db.Documents
+        var questionsThisMonth = await _db.ChatMessages
+            .Where(c => c.UserId == userId && c.CreatedAt >= monthStart)
+            .CountAsync();
+
+        var questionsThisWeek = await _db.ChatMessages
+            .Where(c => c.UserId == userId && c.CreatedAt >= weekStart)
+            .CountAsync();
+
+        var documentAnswers = await _db.ChatMessages
+            .Where(c => c.UserId == userId && c.AnswerSource == "document")
+            .CountAsync();
+
+        var aiFallbackAnswers = await _db.ChatMessages
+            .Where(c => c.UserId == userId && c.AnswerSource == "ai_fallback")
+            .CountAsync();
+
+        var totalDocuments = await _db.Documents
             .Where(d => d.UserId == userId)
+            .CountAsync();
+
+        var readyDocuments = await _db.Documents
+            .Where(d => d.UserId == userId && d.Status == "ready")
+            .CountAsync();
+
+        var totalStorageBytes = await _db.Documents
+            .Where(d => d.UserId == userId)
+            .SumAsync(d => d.FileSizeBytes);
+
+        // Daily activity: group by date in DB, materialize small result set
+        var rawDaily = await _db.ChatMessages
+            .Where(c => c.UserId == userId && c.CreatedAt >= last30Days)
+            .GroupBy(c => c.CreatedAt.Date)
+            .OrderBy(g => g.Key)
+            .Select(g => new { Date = g.Key, Count = g.Count() })
             .ToListAsync();
 
-        var dailyActivity = allMessages
-            .Where(m => m.CreatedAt >= last30Days)
-            .GroupBy(m => m.CreatedAt.Date)
-            .OrderBy(g => g.Key)
-            .Select(g => new DailyUsage
-            {
-                Date = g.Key.ToString("MMM dd"),
-                Questions = g.Count()
-            })
-            .ToList();
+        var dailyActivity = rawDaily.Select(d => new DailyUsage
+        {
+            Date = d.Date.ToString("MMM dd"),
+            Questions = d.Count
+        }).ToList();
 
-        var topDocuments = allMessages
-            .Where(m => m.DocumentId.HasValue)
-            .GroupBy(m => m.DocumentId!.Value)
-            .Select(g => new TopDocument
-            {
-                DocumentId = g.Key,
-                DocumentName = g.First().Document
-                    ?.OriginalFileName ?? "Unknown",
-                QuestionCount = g.Count()
-            })
-            .OrderByDescending(d => d.QuestionCount)
+        // Top documents: group by DocumentId in DB, fetch names separately
+        var topDocGroups = await _db.ChatMessages
+            .Where(c => c.UserId == userId && c.DocumentId.HasValue)
+            .GroupBy(c => c.DocumentId!.Value)
+            .Select(g => new { DocumentId = g.Key, Count = g.Count() })
+            .OrderByDescending(g => g.Count)
             .Take(5)
-            .ToList();
+            .ToListAsync();
+
+        var topDocIds = topDocGroups.Select(d => d.DocumentId).ToList();
+        var docNames = await _db.Documents
+            .Where(d => topDocIds.Contains(d.Id))
+            .Select(d => new { d.Id, d.OriginalFileName })
+            .ToDictionaryAsync(d => d.Id, d => d.OriginalFileName);
+
+        var topDocuments = topDocGroups.Select(d => new TopDocument
+        {
+            DocumentId = d.DocumentId,
+            DocumentName = docNames.GetValueOrDefault(d.DocumentId, "Unknown"),
+            QuestionCount = d.Count
+        }).ToList();
 
         return new UserAnalyticsResponse
         {
-            TotalQuestions = allMessages.Count,
-            QuestionsThisMonth = allMessages
-                .Count(m => m.CreatedAt >= monthStart),
-            QuestionsThisWeek = allMessages
-                .Count(m => m.CreatedAt >= weekStart),
-            DocumentAnswers = allMessages
-                .Count(m => m.AnswerSource == "document"),
-            AiFallbackAnswers = allMessages
-                .Count(m => m.AnswerSource == "ai_fallback"),
-            TotalDocuments = documents.Count,
-            ReadyDocuments = documents
-                .Count(d => d.Status == "ready"),
-            TotalStorageBytes = documents
-                .Sum(d => d.FileSizeBytes),
+            TotalQuestions = totalQuestions,
+            QuestionsThisMonth = questionsThisMonth,
+            QuestionsThisWeek = questionsThisWeek,
+            DocumentAnswers = documentAnswers,
+            AiFallbackAnswers = aiFallbackAnswers,
+            TotalDocuments = totalDocuments,
+            ReadyDocuments = readyDocuments,
+            TotalStorageBytes = totalStorageBytes,
             DailyActivity = dailyActivity,
             TopDocuments = topDocuments
         };
