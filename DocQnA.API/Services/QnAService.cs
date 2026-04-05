@@ -747,9 +747,13 @@ public class QnAService
     GetAnalyticsAsync(Guid userId)
     {
         var now = DateTime.UtcNow;
-        var monthStart = new DateTime(now.Year, now.Month, 1);
-        var weekStart = now.AddDays(-7);
-        var last30Days = now.AddDays(-30);
+        var monthStart = new DateTime(
+        now.Year, now.Month, 1,
+        0, 0, 0, DateTimeKind.Utc);
+
+        var weekStart = DateTime.UtcNow.AddDays(-7);
+
+        var last30Days = DateTime.UtcNow.AddDays(-30);
 
         // Push scalar counts into SQL
         var totalQuestions = await _db.ChatMessages

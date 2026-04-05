@@ -58,41 +58,34 @@ var redisConnectionString =
 
 if (!string.IsNullOrEmpty(redisConnectionString))
 {
-    builder.Services.AddScoped<SemanticCacheService>(sp =>
+    try
     {
-        IConnectionMultiplexer? redis = null;
+        var redis = await ConnectionMultiplexer
+            .ConnectAsync(redisConnectionString);
 
-        try
-        {
-            redis = ConnectionMultiplexer
-                .ConnectAsync(redisConnectionString)
-                .GetAwaiter()
-                .GetResult();
-            Log.Information("Redis connected for semantic caching");
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex,
-                "Redis connection failed — caching disabled");
-        }
+        builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
+        Log.Information("✅ Redis connected for semantic caching");
+    }
+    catch (Exception ex)
+    {
+        // Log once at startup — not on every request
+        Log.Warning("⚠️ Redis unavailable — caching disabled. {Message}",
+            ex.Message);
 
-        return new SemanticCacheService(
-            redis,
-            sp.GetRequiredService<QdrantService>(),
-            sp.GetRequiredService<IConfiguration>(),
-            sp.GetRequiredService<ILogger<SemanticCacheService>>());
-    });
+        // Register null multiplexer — SemanticCacheService handles null gracefully
+        builder.Services
+            .AddSingleton<IConnectionMultiplexer?>(
+                _ => null!);
+    }
 }
 else
 {
-    // Register without Redis — cache always misses gracefully
-    builder.Services.AddScoped<SemanticCacheService>(sp =>
-        new SemanticCacheService(
-            null,
-            sp.GetRequiredService<QdrantService>(),
-            sp.GetRequiredService<IConfiguration>(),
-            sp.GetRequiredService<ILogger<SemanticCacheService>>()));
+    Log.Warning("Redis not configured — caching disabled.");
+    builder.Services.AddSingleton<IConnectionMultiplexer?>(_ => null!);
 }
+
+// Always register SemanticCacheService
+builder.Services.AddScoped<SemanticCacheService>();
 
 // ── JWT Authentication ────────────────────────────────────────
 var jwtKey = builder.Configuration["Jwt:SecretKey"]!;
