@@ -81,16 +81,7 @@ function App() {
           }
         />
 
-        <Route
-          path="/share/:token"
-          element={
-            <ProtectedRoute>
-              <ErrorBoundary>
-                <SharedChatPage />
-              </ErrorBoundary>
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/share/:token" element={<SharedChatPage />} />
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
