@@ -10,6 +10,7 @@ import {
   Tooltip,
 } from "@mui/material";
 import { Delete, PictureAsPdf, Refresh, Chat } from "@mui/icons-material";
+import { styled } from "@mui/material/styles";
 import { documentApi } from "../api/documentApi";
 import type { DocumentListResponse } from "../types";
 import {
@@ -23,6 +24,37 @@ import {
 } from "./styles/DocumentStyles";
 import DocumentCardPreview from "./DocumentCardPreview";
 import ConfirmationDialog from "./ConfirmationDialog";
+
+const RefreshIcon = styled(Refresh)({
+  color: "#2E75B6",
+});
+
+const EmptyPdfIcon = styled(PictureAsPdf)({
+  fontSize: 48,
+  marginBottom: 8,
+  opacity: 0.3,
+});
+
+const FileInfoWrap = styled(Box)({
+  minWidth: 0,
+  flex: 1,
+});
+
+const StatusChip = styled(Chip)({
+  fontWeight: 600,
+  borderRadius: 6,
+});
+
+const ChatButton = styled(Button)({
+  borderRadius: 8,
+  textTransform: "none",
+  fontWeight: 600,
+  fontSize: "0.8rem",
+  background: "linear-gradient(135deg, #1F4E79, #2E75B6)",
+  "&:hover": {
+    background: "linear-gradient(135deg, #163d61, #1F4E79)",
+  },
+});
 
 interface Props {
   documents: DocumentListResponse[];
@@ -92,14 +124,14 @@ const DocumentList = ({ documents, onDelete, onRefresh }: Props) => {
         <SectionTitle>Your Documents</SectionTitle>
         <Tooltip title="Refresh list">
           <IconButton onClick={onRefresh} size="small">
-            <Refresh sx={{ color: "#2E75B6" }} />
+            <RefreshIcon />
           </IconButton>
         </Tooltip>
       </Box>
 
       {documents.length === 0 ? (
         <EmptyStateBox>
-          <PictureAsPdf sx={{ fontSize: 48, mb: 1, opacity: 0.3 }} />
+          <EmptyPdfIcon />
           <DocumentMeta>No documents yet — upload your first PDF!</DocumentMeta>
         </EmptyStateBox>
       ) : (
@@ -111,7 +143,7 @@ const DocumentList = ({ documents, onDelete, onRefresh }: Props) => {
                 chunkCount={doc.chunkCount}
                 fileSizeBytes={doc.fileSizeBytes}
               />
-              <Box sx={{ minWidth: 0, flex: 1 }}>
+              <FileInfoWrap>
                 <DocumentName>{doc.originalFileName}</DocumentName>
                 <DocumentMeta>
                   {formatSize(doc.fileSizeBytes)}
@@ -119,18 +151,17 @@ const DocumentList = ({ documents, onDelete, onRefresh }: Props) => {
                   {" · "}
                   {new Date(doc.createdAt).toLocaleDateString("en-IN")}
                 </DocumentMeta>
-              </Box>
+              </FileInfoWrap>
             </DocumentInfo>
 
             <Box display="flex" alignItems="center" gap={1}>
-              <Chip
+              <StatusChip
                 label={doc.status}
                 color={statusColor(doc.status) as any}
                 size="small"
-                sx={{ fontWeight: 600, borderRadius: 6 }}
               />
               {doc.status === "ready" && (
-                <Button
+                <ChatButton
                   variant="contained"
                   size="small"
                   startIcon={<Chat />}
@@ -139,19 +170,9 @@ const DocumentList = ({ documents, onDelete, onRefresh }: Props) => {
                       state: { mode: "fresh" },
                     })
                   }
-                  sx={{
-                    borderRadius: 8,
-                    textTransform: "none",
-                    fontWeight: 600,
-                    fontSize: "0.8rem",
-                    background: "linear-gradient(135deg, #1F4E79, #2E75B6)",
-                    "&:hover": {
-                      background: "linear-gradient(135deg, #163d61, #1F4E79)",
-                    },
-                  }}
                 >
                   Chat
-                </Button>
+                </ChatButton>
               )}
               <DeleteButton
                 variant="outlined"

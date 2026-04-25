@@ -186,6 +186,8 @@ public class QnAService
             fallbackReason = "Low confidence in document matches";
         }
 
+        var languageInstruction = GetLanguageInstruction(request.Language);
+
         string answer;
         List<SourceChunk> sources;
 
@@ -211,7 +213,7 @@ public class QnAService
                 """;
 
             answer = await _nimService.GetChatCompletionAsync(
-                "You are a helpful AI assistant providing general knowledge answers.",
+                $"You are a helpful AI assistant providing general knowledge answers. {languageInstruction}",
                 aiFallbackPrompt);
 
             sources = new List<SourceChunk>();
@@ -227,6 +229,7 @@ public class QnAService
             var systemPrompt = """
                                 You are an expert document assistant. Your task is to provide 
                                 comprehensive, accurate answers based on the provided context.
+                                """ + $"\n                                {languageInstruction}" + """
     
                                 Instructions:
                                 1. Carefully analyze ALL provided sources to extract relevant information
@@ -248,12 +251,9 @@ public class QnAService
                                 """;
 
             answer = await _nimService.GetChatCompletionAsync(systemPrompt, userMessage);
-            sources = rerankedResults.Select(r => new SourceChunk
-            {
-                Text = r.Text,
-                Score = r.Score,
-                ChunkIndex = r.ChunkIndex
-            }).ToList();
+            sources = await ExtractCitationsAsync(
+                answer,
+                rerankedResults);
         }
 
         // ── Cache the answer ───────────────────────────────────────────
@@ -288,11 +288,16 @@ public class QnAService
             "Q&A complete. Answer length: {Length} chars",
             answer.Length);
 
+        var confidence = CalculateConfidence(
+    rerankedResults, useAiFallback);
+
+
         return new AskResponse
         {
             Question = request.Question,
             Answer = answer,
             Sources = sources,
+            Confidence = confidence,
             ImageSources = imageSources,
             CreatedAt = chatMessage.CreatedAt,
             AnswerSource = useAiFallback ? "ai_fallback" : "document",
@@ -303,6 +308,7 @@ public class QnAService
     public async Task AskStreamAsync(
     string question,
     Guid documentId,
+    string language,
     Guid userId,
     HttpResponse response)
     {
@@ -378,6 +384,8 @@ public class QnAService
                 fallbackReason = "Low confidence in document matches";
             }
 
+            var languageInstruction = GetLanguageInstruction(language);
+
             // ── Step 5: Send metadata ──────────────────────────────
             var metadata = new
             {
@@ -452,6 +460,19 @@ public class QnAService
             await response.WriteAsync($"event: sources\ndata: {sourcesJson}\n\n");
             await response.Body.FlushAsync();
 
+            var confidence = CalculateConfidence(
+                rerankedResults, useAiFallback);
+            var confidenceJson = System.Text.Json.JsonSerializer.Serialize(
+                confidence,
+                new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNamingPolicy =
+                        System.Text.Json.JsonNamingPolicy.CamelCase
+                });
+            await response.WriteAsync(
+                $"event: confidence\ndata: {confidenceJson}\n\n");
+            await response.Body.FlushAsync();
+
             string systemPrompt;
             string userMessage;
 
@@ -462,7 +483,8 @@ public class QnAService
                     "Using AI fallback streaming for question: {Question}",
                     question);
 
-                systemPrompt = "You are a helpful AI assistant providing general knowledge answers.";
+                systemPrompt =
+                    $"You are a helpful AI assistant providing general knowledge answers. {languageInstruction}";
                 userMessage = $"""
                     You are a knowledgeable AI assistant. The user has uploaded a document titled "{document.OriginalFileName}" and is asking a question.
                     
@@ -487,6 +509,7 @@ public class QnAService
 
                 systemPrompt = """
                 You are an expert document assistant. Your task is to provide comprehensive, accurate answers based on the provided context.
+                """ + $"\n                {languageInstruction}" + """
                 
                 Instructions:
                 1. Carefully analyze ALL provided sources to extract relevant information
@@ -838,4 +861,361 @@ public class QnAService
             TopDocuments = topDocuments
         };
     }
+
+    public async Task<SummarizeResponse> SummarizeAsync(
+    SummarizeRequest request, Guid userId)
+    {
+        // ── Validate document ──────────────────────────────────────
+        var document = await _db.Documents
+            .FirstOrDefaultAsync(d =>
+                d.Id == request.DocumentId &&
+                d.UserId == userId);
+
+        if (document == null)
+            throw new KeyNotFoundException("Document not found.");
+
+        if (document.Status != "ready")
+            throw new InvalidOperationException(
+                "Document is still processing.");
+
+        _logger.LogInformation(
+            "Summarizing document {DocId} in style '{Style}'",
+            request.DocumentId, request.Style);
+
+        // ── Fetch all chunks from Qdrant ───────────────────────────
+        // Use a generic embedding to retrieve broad content
+        var broadQuery = await _nimService
+            .GetEmbeddingAsync("main content summary overview");
+
+        var allChunks = await _qdrantService.SearchAsync(
+            document.QdrantCollectionName,
+            broadQuery,
+            topK: 20,           // get more chunks for summary
+            scoreThreshold: 0.0f); // get everything
+
+        if (!allChunks.Any())
+            throw new InvalidOperationException(
+                "No content found in document.");
+
+        // ── Build prompt based on style ────────────────────────────
+        var styleInstructions = request.Style switch
+        {
+            "detailed" => """
+            Write a comprehensive, detailed summary covering:
+            1. Main topics and themes
+            2. Key findings or arguments
+            3. Important data, numbers, or statistics
+            4. Conclusions and recommendations
+            Use clear paragraphs with headings.
+            """,
+
+            "bullet_points" => """
+            Summarize in bullet points:
+            • Start with a 1-sentence overview
+            • List the 5-8 most important points
+            • Include any key numbers or statistics
+            • End with the main conclusion
+            Keep each bullet concise and actionable.
+            """,
+
+            "executive" => """
+            Write an executive summary (max 150 words):
+            1. What this document is about (1 sentence)
+            2. The 3 most critical points
+            3. Key recommendation or conclusion
+            Write for a busy senior executive.
+            """,
+
+            _ => """
+            Write a concise summary (2-3 paragraphs):
+            - What the document is about
+            - The main points covered
+            - Key conclusions or takeaways
+            Be clear and informative.
+            """
+        };
+
+        var context = string.Join("\n\n",
+            allChunks.Select(c => c.Text));
+
+        var systemPrompt = $"""
+        You are an expert document analyst.
+        Your task is to summarize the provided document content.
+        {styleInstructions}
+        Base your summary ONLY on the provided content.
+        """;
+
+        var userMessage = $"""
+        Document: "{document.OriginalFileName}"
+
+        Content:
+        {context}
+
+        Please provide the summary now.
+        """;
+
+        var summary = await _nimService
+            .GetChatCompletionAsync(systemPrompt, userMessage);
+
+        return new SummarizeResponse
+        {
+            Summary = summary,
+            Style = request.Style,
+            ChunksAnalyzed = allChunks.Count,
+            DocumentId = document.Id,
+            DocumentName = document.OriginalFileName,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+
+    public async Task<SuggestQuestionsResponse>
+    SuggestQuestionsAsync(
+        SuggestQuestionsRequest request,
+        Guid userId)
+    {
+        var document = await _db.Documents
+            .FirstOrDefaultAsync(d =>
+                d.Id == request.DocumentId &&
+                d.UserId == userId);
+
+        if (document == null)
+            throw new KeyNotFoundException("Document not found.");
+
+        if (document.Status != "ready")
+            throw new InvalidOperationException(
+                "Document is still processing.");
+
+        // Fetch sample chunks
+        var sampleQuery = await _nimService
+            .GetEmbeddingAsync("introduction overview main topic");
+
+        var sampleChunks = await _qdrantService.SearchAsync(
+            document.QdrantCollectionName,
+            sampleQuery,
+            topK: 8,
+            scoreThreshold: 0.0f);
+
+        var context = string.Join("\n\n",
+            sampleChunks.Take(5).Select(c => c.Text));
+
+        var systemPrompt = $$"""
+        You are an expert at generating insightful questions
+        about documents. Generate exactly {{request.Count}}
+        questions that would help someone understand this
+        document deeply.
+
+        Rules:
+        1. Questions must be answerable from the document
+        2. Cover different aspects: overview, specifics,
+           implications
+        3. Mix simple and complex questions
+        4. Return ONLY valid JSON, no other text
+
+        Return this exact JSON format:
+        {
+              "questions": [
+            {"question": "...", "category": "Overview"},
+            {"question": "...", "category": "Details"},
+            {"question": "...", "category": "Analysis"}
+          ]
+        }
+        """;
+
+        var userMessage = $"""
+        Document: "{document.OriginalFileName}"
+
+        Sample content:
+        {context}
+
+        Generate {request.Count} questions about this document.
+        """;
+
+        var jsonResponse = await _nimService
+            .GetChatCompletionAsync(systemPrompt, userMessage);
+
+        // Parse JSON response
+        try
+        {
+            // Strip markdown code blocks if present
+            var cleanJson = jsonResponse
+                .Replace("```json", "")
+                .Replace("```", "")
+                .Trim();
+
+            var parsed = System.Text.Json.JsonSerializer
+                .Deserialize<SuggestionsJsonResponse>(
+                    cleanJson,
+                    new System.Text.Json.JsonSerializerOptions
+                    { PropertyNameCaseInsensitive = true });
+
+            return new SuggestQuestionsResponse
+            {
+                Questions = parsed?.Questions
+                    .Select(q => new SuggestedQuestion
+                    {
+                        Question = q.Question,
+                        Category = q.Category
+                    }).ToList()
+                    ?? new List<SuggestedQuestion>(),
+                DocumentId = document.Id,
+                DocumentName = document.OriginalFileName
+            };
+        }
+        catch
+        {
+            // Fallback — return generic questions
+            return new SuggestQuestionsResponse
+            {
+                Questions = new List<SuggestedQuestion>
+            {
+                new() {
+                    Question = $"What is '{document.OriginalFileName}' about?",
+                    Category = "Overview"
+                },
+                new() {
+                    Question = "What are the main points covered?",
+                    Category = "Overview"
+                },
+                new() {
+                    Question = "What are the key conclusions?",
+                    Category = "Analysis"
+                }
+            },
+                DocumentId = document.Id,
+                DocumentName = document.OriginalFileName
+            };
+        }
+    }
+
+    private static string GetLanguageInstruction(string? language)
+    {
+        return (language ?? "en").Trim().ToLowerInvariant() switch
+        {
+            "hi" => "Respond in Hindi (हिंदी में जवाब दें).",
+            "ta" => "Respond in Tamil (தமிழில் பதிலளிக்கவும்).",
+            "te" => "Respond in Telugu (తెలుగులో సమాధానం ఇవ్వండి).",
+            "bn" => "Respond in Bengali (বাংলায় উত্তর দিন).",
+            "mr" => "Respond in Marathi (मराठीत उत्तर द्या).",
+            "bh" => "Respond in Bhojpuri (भोजपुरी में जवाब दीं)",
+            _ => "Respond in English."
+        };
+    }
+
+    private ConfidenceScore CalculateConfidence(
+    List<(string Text, float Score, int ChunkIndex)> results,
+    bool isAiFallback)
+    {
+        if (isAiFallback)
+        {
+            return new ConfidenceScore
+            {
+                Overall = 0.2f,
+                Level = "Low",
+                Explanation = "Answer based on general AI knowledge, not your document."
+            };
+        }
+
+        if (!results.Any())
+        {
+            return new ConfidenceScore
+            {
+                Overall = 0.0f,
+                Level = "Low",
+                Explanation = "No relevant content found."
+            };
+        }
+
+        // Calculate based on:
+        // 1. Top source score (40%)
+        // 2. Average score of top 3 (30%)
+        // 3. Number of supporting sources (30%)
+        var topScore = results.Max(r => r.Score);
+        var avgTop3 = results.Take(3).Average(r => r.Score);
+        var sourceCount = Math.Min(results.Count, 5);
+        var sourceFactor = sourceCount / 5.0f;
+
+        var overall = (topScore * 0.4f)
+            + (avgTop3 * 0.3f)
+            + (sourceFactor * 0.3f);
+
+        overall = Math.Clamp(overall, 0.0f, 1.0f);
+
+        var (level, explanation) = overall switch
+        {
+            >= 0.75f => ("High",
+                $"Strong match found across {results.Count} source(s). Top relevance: {topScore:P0}."),
+            >= 0.50f => ("Medium",
+                $"Moderate match found. Answer may be partially complete. Top relevance: {topScore:P0}."),
+            _ => ("Low",
+                $"Weak match found. Answer may not fully address your question. Top relevance: {topScore:P0}.")
+        };
+
+        return new ConfidenceScore
+        {
+            Overall = overall,
+            Level = level,
+            Explanation = explanation
+        };
+    }
+
+    private async Task<List<SourceChunk>>
+    ExtractCitationsAsync(
+        string answer,
+        List<(string Text, float Score, int ChunkIndex)> sources)
+    {
+        // Split each source into sentences
+        // Find sentences most similar to the answer
+        var result = new List<SourceChunk>();
+
+        foreach (var source in sources)
+        {
+            var sentences = source.Text
+                .Split(new[] { '.', '!', '?' },
+                    StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim())
+                .Where(s => s.Length > 20)
+                .ToList();
+
+            // Find sentences that appear referenced in the answer
+            var cited = sentences.Where(sentence =>
+            {
+                // Check if key phrases from sentence appear in answer
+                var words = sentence
+                    .ToLower()
+                    .Split(' ')
+                    .Where(w => w.Length > 4)
+                    .ToList();
+
+                var matchCount = words
+                    .Count(w => answer.ToLower().Contains(w));
+
+                return matchCount >= Math.Min(3,
+                    words.Count / 2);
+            }).ToList();
+
+            result.Add(new SourceChunk
+            {
+                Text = source.Text,
+                Score = source.Score,
+                ChunkIndex = source.ChunkIndex,
+                CitedSentences = cited
+            });
+        }
+
+        return result;
+    }
+
+    // JSON helper class
+    private class SuggestionsJsonResponse
+    {
+        public List<SuggestedQuestionJson> Questions { get; set; }
+            = new();
+    }
+
+    private class SuggestedQuestionJson
+    {
+        public string Question { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+    }
+
 }

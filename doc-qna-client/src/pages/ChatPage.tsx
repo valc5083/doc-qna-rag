@@ -16,6 +16,8 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  Select,
+  FormControl,
 } from "@mui/material";
 import {
   Send,
@@ -24,18 +26,25 @@ import {
   Warning,
   CheckCircle,
   Download,
+  Share,
 } from "@mui/icons-material";
+import { styled } from "@mui/material/styles";
 import ReactMarkdown from "react-markdown";
 import { qnaApi } from "../api/qnaApi";
 import { documentApi } from "../api/documentApi";
+import { shareApi } from "../api/shareApi";
 import type {
   ChatBubble,
+  ConfidenceScore,
   DocumentListResponse,
   ImageSourceChunk,
   SourceChunk,
   ChatHistoryItem,
 } from "../types";
 import SourceViewer from "../components/SourceViewer";
+import DocumentSummary from "../components/DocumentSummary";
+import SuggestedQuestions from "../components/SuggestedQuestions";
+import ConfidenceIndicator from "../components/ConfidenceIndicator";
 import {
   ChatLayout,
   ChatHeader,
@@ -65,6 +74,136 @@ import usePageTitle from "../hooks/usePageTitle";
 import VoiceInput from "../components/VoiceInput";
 import { exportAsMarkdown, exportAsPDF } from "../utils/exportChat";
 import ImageSourceViewer from "../components/ImageSourceViewer";
+import DarkModeToggle from "../components/DarkModeToggle";
+
+const HeaderBackColumn = styled(Box)({
+  display: "flex",
+  justifyContent: "flex-start",
+  gridColumn: "1 / 2",
+});
+
+const HeaderCenterColumn = styled(Box)(({ theme }) => ({
+  gridColumn: "2 / 3",
+  justifySelf: "center",
+  width: "100%",
+  minWidth: 0,
+  paddingLeft: theme.spacing(0.5),
+  paddingRight: theme.spacing(0.5),
+  [theme.breakpoints.up("sm")]: {
+    paddingLeft: 0,
+    paddingRight: 0,
+  },
+}));
+
+const HeaderRightColumn = styled(Box)({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-end",
+  gap: 8,
+  gridColumn: "3 / 4",
+});
+
+const StatusChip = styled(Chip)(({ theme }) => ({
+  background: "rgba(255,255,255,0.2)",
+  color: "#ffffff",
+  fontSize: "0.75rem",
+  display: "none",
+  [theme.breakpoints.up("sm")]: {
+    display: "inline-flex",
+  },
+}));
+
+const HeaderActionIconButton = styled(IconButton)({
+  color: "#ffffff",
+  width: 34,
+  height: 34,
+});
+
+const ExportIconButton = styled(HeaderActionIconButton, {
+  shouldForwardProp: (prop) => prop !== "isVisible",
+})<{ isVisible: boolean }>(({ isVisible }) => ({
+  visibility: isVisible ? "visible" : "hidden",
+}));
+
+const ExportMenu = styled(Menu)({
+  "& .MuiPaper-root": {
+    borderRadius: 8,
+    minWidth: 180,
+  },
+});
+
+const LanguageFormControl = styled(FormControl)({
+  minWidth: 120,
+});
+
+const LanguageSelect = styled(Select)({
+  color: "#ffffff",
+  fontSize: "0.8rem",
+  ".MuiOutlinedInput-notchedOutline": {
+    borderColor: "rgba(255,255,255,0.3)",
+  },
+  "&:hover .MuiOutlinedInput-notchedOutline": {
+    borderColor: "rgba(255,255,255,0.6)",
+  },
+  ".MuiSvgIcon-root": {
+    color: "#ffffff",
+  },
+});
+
+const SummarySuggestionsPanel = styled(Box)({
+  padding: 16,
+  borderBottom: "1px solid #E0E0E0",
+});
+
+const WarningIcon = styled(Warning)({
+  fontSize: 18,
+});
+
+const SourceCheckIcon = styled(CheckCircle)({
+  fontSize: 14,
+});
+
+const ThinkingBubble = styled(Box)(({ theme }) => ({
+  alignSelf: "flex-start",
+  borderRadius: "18px 18px 18px 4px",
+  padding: "14px 20px",
+  background: theme.palette.background.paper,
+  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+  border: `1px solid ${theme.palette.divider}`,
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+}));
+
+const ThinkingText = styled(Typography)(({ theme }) => ({
+  fontSize: "0.9rem",
+  color: theme.palette.text.secondary,
+  fontStyle: "italic",
+}));
+
+const HistoryDrawer = styled(Drawer)({
+  "& .MuiDrawer-paper": {
+    width: 360,
+    padding: 16,
+  },
+});
+
+const HistoryDivider = styled(Divider)({
+  marginBottom: 16,
+});
+
+const HistoryItem = styled(ListItem)(({ theme }) => ({
+  marginBottom: 8,
+  background: theme.palette.mode === "dark" ? "#121926" : "#F5F8FB",
+  borderRadius: 8,
+  padding: 12,
+  flexDirection: "column",
+  alignItems: "flex-start",
+  cursor: "pointer",
+  "&:hover": {
+    background: theme.palette.mode === "dark" ? "#1E293B" : "#EBF3FB",
+  },
+}));
 
 const ChatPage = () => {
   const { documentId } = useParams<{ documentId: string }>();
@@ -87,6 +226,19 @@ const ChatPage = () => {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
   const [exportAnchor, setExportAnchor] = useState<null | HTMLElement>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+
+  const [language, setLanguage] = useState("en");
+
+  const languages = [
+    { code: "en", label: "🇬🇧 English" },
+    { code: "hi", label: "🇮🇳 Hindi" },
+    { code: "ta", label: "🇮🇳 Tamil" },
+    { code: "te", label: "🇮🇳 Telugu" },
+    { code: "bn", label: "🇮🇳 Bengali" },
+    { code: "mr", label: "🇮🇳 Marathi" },
+    { code: "bh", label: "🇮🇳 Bhojpuri" },
+  ];
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -190,6 +342,12 @@ const ChatPage = () => {
     if (!question.trim() || !documentId || loading) return;
 
     const userQuestion = question.trim();
+    const request = {
+      question: userQuestion,
+      documentId,
+      language,
+    };
+
     setQuestion("");
     setLoading(true);
     setStatusText("");
@@ -223,9 +381,10 @@ const ChatPage = () => {
 
     // Start streaming
     eventSourceRef.current = qnaApi.askStream(
-      userQuestion,
-      documentId,
+      request.question,
+      request.documentId,
       token,
+      request.language,
 
       // onToken — append each token to the assistant bubble
       (token) => {
@@ -273,6 +432,15 @@ const ChatPage = () => {
         setStatusText(status);
       },
 
+      // onConfidence — attach confidence score
+      (confidence: ConfidenceScore) => {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantId ? { ...msg, confidence } : msg,
+          ),
+        );
+      },
+
       // onDone
       () => {
         setLoading(false);
@@ -300,7 +468,7 @@ const ChatPage = () => {
         setStreamingId(null);
       },
     );
-  }, [question, documentId, loading]);
+  }, [question, documentId, language, loading]);
 
   const handleHistoryClick = (selectedItem: ChatHistoryItem) => {
     if (!documentId) return;
@@ -342,15 +510,40 @@ const ChatPage = () => {
     }
   };
 
+  const handleShare = async () => {
+    if (!documentId) return;
+
+    try {
+      setShareLoading(true);
+      const shareMessages = messages
+        .filter((m) => m.content)
+        .map((m) => ({
+          type: m.type,
+          content: m.content,
+          sources: m.sources ?? [],
+        }));
+
+      const result = await shareApi.create({
+        documentId,
+        title: `Chat about ${document?.originalFileName}`,
+        messages: shareMessages,
+        expiryDays: 30,
+      });
+
+      await navigator.clipboard.writeText(result.shareUrl);
+      toast.success("Share link copied to clipboard! 🔗");
+    } catch {
+      toast.error("Failed to create share link.");
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
   return (
     <ChatLayout>
       {/* Header */}
       <ChatHeader>
-        <Box
-          display="flex"
-          justifyContent="flex-start"
-          sx={{ gridColumn: "1 / 2" }}
-        >
+        <HeaderBackColumn>
           <BackButton
             variant="outlined"
             startIcon={<ArrowBack />}
@@ -358,30 +551,16 @@ const ChatPage = () => {
           >
             Back
           </BackButton>
-        </Box>
+        </HeaderBackColumn>
 
-        <Box
-          sx={{
-            gridColumn: "2 / 3",
-            justifySelf: "center",
-            width: "100%",
-            minWidth: 0,
-            px: { xs: 0.5, sm: 0 },
-          }}
-        >
+        <HeaderCenterColumn>
           <ChatHeaderTitle>🤖 DocQnA Chat</ChatHeaderTitle>
           <ChatHeaderSubtitle>
             {document ? `📄 ${document.originalFileName}` : "Loading..."}
           </ChatHeaderSubtitle>
-        </Box>
+        </HeaderCenterColumn>
 
-        <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="flex-end"
-          gap={1}
-          sx={{ gridColumn: "3 / 4" }}
-        >
+        <HeaderRightColumn>
           <Box
             display="flex"
             alignItems="center"
@@ -389,45 +568,44 @@ const ChatPage = () => {
             gap={1}
             flexWrap="nowrap"
           >
-            {statusText && (
-              <Chip
-                label={statusText}
-                size="small"
-                sx={{
-                  background: "rgba(255,255,255,0.2)",
-                  color: "#ffffff",
-                  fontSize: "0.75rem",
-                  display: { xs: "none", sm: "inline-flex" },
-                }}
-              />
+            {statusText && <StatusChip label={statusText} size="small" />}
+
+            {messages.length > 1 && (
+              <Tooltip title="Share this chat">
+                <span>
+                  <HeaderActionIconButton
+                    size="small"
+                    onClick={handleShare}
+                    disabled={shareLoading}
+                  >
+                    {shareLoading ? (
+                      <CircularProgress size={20} color="inherit" />
+                    ) : (
+                      <Share />
+                    )}
+                  </HeaderActionIconButton>
+                </span>
+              </Tooltip>
             )}
 
             <Tooltip title={messages.length > 0 ? "Export chat" : ""}>
               <span>
-                <IconButton
+                <ExportIconButton
                   size="small"
-                  sx={{
-                    color: "#ffffff",
-                    width: 34,
-                    height: 34,
-                    visibility: messages.length > 0 ? "visible" : "hidden",
-                  }}
+                  isVisible={messages.length > 0}
                   onClick={(e) => setExportAnchor(e.currentTarget)}
                 >
                   <Download />
-                </IconButton>
+                </ExportIconButton>
               </span>
             </Tooltip>
 
             {messages.length > 0 && (
               <>
-                <Menu
+                <ExportMenu
                   anchorEl={exportAnchor}
                   open={Boolean(exportAnchor)}
                   onClose={() => setExportAnchor(null)}
-                  PaperProps={{
-                    sx: { borderRadius: 2, minWidth: 180 },
-                  }}
                 >
                   <MenuItem
                     onClick={() => {
@@ -465,21 +643,43 @@ const ChatPage = () => {
                     </ListItemIcon>
                     <ListItemText>Export as PDF</ListItemText>
                   </MenuItem>
-                </Menu>
+                </ExportMenu>
               </>
             )}
 
-            <IconButton
+            <HeaderActionIconButton
               onClick={() => setHistoryOpen(true)}
               size="small"
-              sx={{ color: "#ffffff", width: 34, height: 34 }}
               title="View history"
             >
               <History />
-            </IconButton>
+            </HeaderActionIconButton>
+            <LanguageFormControl size="small">
+              <LanguageSelect
+                value={language}
+                onChange={(e) => setLanguage(e.target.value as string)}
+              >
+                {languages.map((l) => (
+                  <MenuItem key={l.code} value={l.code} dense>
+                    {l.label}
+                  </MenuItem>
+                ))}
+              </LanguageSelect>
+            </LanguageFormControl>
+            <DarkModeToggle />
           </Box>
-        </Box>
+        </HeaderRightColumn>
       </ChatHeader>
+
+      {messages.length === 0 && documentId && (
+        <SummarySuggestionsPanel>
+          <DocumentSummary documentId={documentId} />
+          <SuggestedQuestions
+            documentId={documentId}
+            onSelectQuestion={(q) => setQuestion(q)}
+          />
+        </SummarySuggestionsPanel>
+      )}
 
       {/* Messages */}
       <MessagesArea>
@@ -503,7 +703,7 @@ const ChatPage = () => {
                     {msg.answerSource === "ai_fallback" && (
                       <FallbackWarning>
                         <FallbackWarningTitle>
-                          <Warning sx={{ fontSize: 18 }} />
+                          <WarningIcon />
                           AI General Knowledge
                         </FallbackWarningTitle>
                         <FallbackWarningText>
@@ -523,7 +723,7 @@ const ChatPage = () => {
                       msg.sources &&
                       msg.sources.length > 0 && (
                         <DocumentSourceBadge>
-                          <CheckCircle sx={{ fontSize: 14 }} />
+                          <SourceCheckIcon />
                           From document ({msg.sources.length} source
                           {msg.sources.length > 1 ? "s" : ""})
                         </DocumentSourceBadge>
@@ -548,6 +748,7 @@ const ChatPage = () => {
                             />
                           )}
                         </MarkdownContent>
+                        <ConfidenceIndicator confidence={msg.confidence} />
                       </AssistantBubbleAI>
                     ) : (
                       <AssistantBubbleDocument elevation={0}>
@@ -567,6 +768,7 @@ const ChatPage = () => {
                             />
                           )}
                         </MarkdownContent>
+                        <ConfidenceIndicator confidence={msg.confidence} />
                         {Array.isArray(msg.sources) &&
                           msg.sources.length > 0 && (
                             <SourceViewer sources={msg.sources} />
@@ -577,29 +779,10 @@ const ChatPage = () => {
                   </AnswerContainer>
                 ) : (
                   // ← Thinking bubble OUTSIDE AssistantBubble
-                  <Box
-                    sx={{
-                      alignSelf: "flex-start",
-                      borderRadius: "18px 18px 18px 4px",
-                      padding: "14px 20px",
-                      background: "#ffffff",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                    }}
-                  >
+                  <ThinkingBubble>
                     <CircularProgress size={16} />
-                    <Typography
-                      sx={{
-                        fontSize: "0.9rem",
-                        color: "#888888",
-                        fontStyle: "italic",
-                      }}
-                    >
-                      {statusText || "Thinking..."}
-                    </Typography>
-                  </Box>
+                    <ThinkingText>{statusText || "Thinking..."}</ThinkingText>
+                  </ThinkingBubble>
                 )}
               </Box>
             ))}
@@ -641,13 +824,10 @@ const ChatPage = () => {
       </InputArea>
 
       {/* History Drawer */}
-      <Drawer
+      <HistoryDrawer
         anchor="right"
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
-        PaperProps={{
-          sx: { width: 360, p: 2 },
-        }}
       >
         <Box
           display="flex"
@@ -655,12 +835,12 @@ const ChatPage = () => {
           justifyContent="space-between"
           mb={2}
         >
-          <Typography fontWeight={700} fontSize="1.1rem" color="#1F4E79">
+          <Typography fontWeight={700} fontSize="1.1rem" color="text.primary">
             📜 Recent Questions
           </Typography>
           <IconButton onClick={() => setHistoryOpen(false)}>✕</IconButton>
         </Box>
-        <Divider sx={{ mb: 2 }} />
+        <HistoryDivider />
 
         {chatHistory.length === 0 ? (
           <Typography color="text.secondary" fontSize="0.875rem">
@@ -669,25 +849,15 @@ const ChatPage = () => {
         ) : (
           <List disablePadding>
             {chatHistory.map((item) => (
-              <ListItem
+              <HistoryItem
                 key={item.id}
                 disablePadding
-                sx={{
-                  mb: 1,
-                  background: "#F5F8FB",
-                  borderRadius: 2,
-                  p: 1.5,
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                  cursor: "pointer",
-                  "&:hover": { background: "#EBF3FB" },
-                }}
                 onClick={() => handleHistoryClick(item)}
               >
                 <Typography
                   fontSize="0.85rem"
                   fontWeight={600}
-                  color="#1F4E79"
+                  color="text.primary"
                   mb={0.5}
                 >
                   🙋{" "}
@@ -695,17 +865,17 @@ const ChatPage = () => {
                     ? item.question.substring(0, 60) + "..."
                     : item.question}
                 </Typography>
-                <Typography fontSize="0.75rem" color="#888888">
+                <Typography fontSize="0.75rem" color="text.secondary">
                   {item.answer.substring(0, 80)}...
                 </Typography>
-                <Typography fontSize="0.7rem" color="#AAAAAA" mt={0.5}>
+                <Typography fontSize="0.7rem" color="text.secondary" mt={0.5}>
                   {new Date(item.createdAt).toLocaleDateString("en-IN")}
                 </Typography>
-              </ListItem>
+              </HistoryItem>
             ))}
           </List>
         )}
-      </Drawer>
+      </HistoryDrawer>
     </ChatLayout>
   );
 };

@@ -1,16 +1,18 @@
 import { styled } from "@mui/material/styles";
 import { Box, Button, Card, TextField, Typography } from "@mui/material";
 
-export const CollectionCard = styled(Card)({
+export const CollectionCard = styled(Card)(({ theme }) => ({
   borderRadius: 12,
   marginBottom: 16,
   boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
   overflow: "hidden",
   transition: "box-shadow 0.2s",
+  background: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.divider}`,
   "&:hover": {
     boxShadow: "0 4px 16px rgba(0,0,0,0.14)",
   },
-});
+}));
 
 export const CollectionCardHeader = styled(Box)({
   background: "linear-gradient(135deg, #1F4E79, #2E75B6)",
@@ -64,13 +66,13 @@ export const CollectionBody = styled(Box)({
   },
 });
 
-export const CollectionDocItem = styled(Box)({
+export const CollectionDocItem = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
   gap: 10,
   padding: "10px 0",
-  borderBottom: "1px solid #F0F4F8",
+  borderBottom: `1px solid ${theme.palette.divider}`,
   "@media (max-width: 600px)": {
     alignItems: "stretch",
     flexDirection: "column",
@@ -78,7 +80,7 @@ export const CollectionDocItem = styled(Box)({
   "&:last-child": {
     borderBottom: "none",
   },
-});
+}));
 
 export const CollectionDocInfo = styled(Box)({
   display: "flex",
@@ -88,13 +90,14 @@ export const CollectionDocInfo = styled(Box)({
   width: "100%",
 });
 
-export const CollectionDocTitle = styled(Typography)({
+export const CollectionDocTitle = styled(Typography)(({ theme }) => ({
   fontWeight: 600,
   fontSize: "0.9rem",
+  color: theme.palette.text.primary,
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
-});
+}));
 
 export const CollectionDocActions = styled(Box)({
   display: "flex",
@@ -107,15 +110,17 @@ export const CollectionDocActions = styled(Box)({
   },
 });
 
-export const CreateCollectionCard = styled(Card)({
+export const CreateCollectionCard = styled(Card)(({ theme }) => ({
   borderRadius: 12,
   marginBottom: 24,
   boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
   padding: "20px 24px",
+  background: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.divider}`,
   "@media (max-width: 600px)": {
     padding: "14px",
   },
-});
+}));
 
 export const CollectionInput = styled(TextField)({
   marginBottom: 12,
@@ -153,11 +158,11 @@ export const DeleteCollectionButton = styled(Button)({
   },
 });
 
-export const EmptyCollectionBox = styled(Box)({
+export const EmptyCollectionBox = styled(Box)(({ theme }) => ({
   textAlign: "center",
   padding: "32px 0",
-  color: "#AAAAAA",
-});
+  color: theme.palette.text.secondary,
+}));
 
 export const DocCountBadge = styled(Box)({
   background: "rgba(255,255,255,0.2)",

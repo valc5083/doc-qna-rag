@@ -14,5 +14,11 @@ public class AskRequestValidator : AbstractValidator<AskRequest>
 
         RuleFor(x => x.DocumentId)
             .NotEmpty().WithMessage("DocumentId is required.");
+
+        RuleFor(x => x.Language)
+            .NotEmpty().WithMessage("Language is required.")
+            .Must(lang => new[] { "en", "hi", "ta", "te", "bn", "mr", "bh" }
+                .Contains((lang ?? string.Empty).Trim().ToLowerInvariant()))
+            .WithMessage("Unsupported language. Allowed: en, hi, ta, te, bn, mr, bh.");
     }
 }

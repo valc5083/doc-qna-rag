@@ -17,15 +17,20 @@ import {
   BottomLinkText,
 } from "../components/styles/AuthStyles";
 import { LockOutlined } from "@mui/icons-material";
+import { styled } from "@mui/material/styles";
 import { authApi } from "../api/authApi";
 import { useAuthStore } from "../store/authStore";
 import ConfirmationDialog from "../components/ConfirmationDialog";
 import usePageTitle from "../hooks/usePageTitle";
 
+const LockIcon = styled(LockOutlined)({
+  color: "white",
+});
+
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login } = useAuthStore();
-  usePageTitle('Login');
+  usePageTitle("Login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,7 +46,7 @@ const LoginPage = () => {
       setLoading(true);
       setError("");
       const response = await authApi.login({ email, password });
-      toast.success('Welcome back!');
+      toast.success("Welcome back!");
       login(response.accessToken, response.refreshToken, response.email);
       navigate("/dashboard");
     } catch (err: any) {
@@ -64,7 +69,7 @@ const LoginPage = () => {
         <CardInner>
           <HeaderSection>
             <IconAvatar>
-              <LockOutlined sx={{ color: "white" }} />
+              <LockIcon />
             </IconAvatar>
             <PageTitle>Welcome Back</PageTitle>
             <SubTitle>Sign in to DocQnA</SubTitle>

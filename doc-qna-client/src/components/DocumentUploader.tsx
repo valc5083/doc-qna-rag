@@ -1,8 +1,9 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useDropzone, type FileRejection } from "react-dropzone";
 import toast from "react-hot-toast";
 import { CircularProgress } from "@mui/material";
 import { CloudUpload } from "@mui/icons-material";
+import { styled } from "@mui/material/styles";
 import { documentApi } from "../api/documentApi";
 import type { DocumentListResponse } from "../types";
 import {
@@ -12,7 +13,11 @@ import {
   DropZoneSubText,
   UploadProgressBar,
 } from "./styles/DocumentStyles";
-import { useState } from "react";
+
+const UploadCloudIcon = styled(CloudUpload)({
+  fontSize: 48,
+  color: "#2E75B6",
+});
 
 interface Props {
   onUploadSuccess: (doc: DocumentListResponse) => void;
@@ -86,11 +91,7 @@ const DocumentUploader = ({ onUploadSuccess }: Props) => {
       <DropZoneBox {...getRootProps()} isDragActive={isDragActive}>
         <input {...getInputProps()} />
         <DropZoneIcon>
-          {uploading ? (
-            <CircularProgress size={40} />
-          ) : (
-            <CloudUpload sx={{ fontSize: 48, color: "#2E75B6" }} />
-          )}
+          {uploading ? <CircularProgress size={40} /> : <UploadCloudIcon />}
         </DropZoneIcon>
 
         {uploading ? (

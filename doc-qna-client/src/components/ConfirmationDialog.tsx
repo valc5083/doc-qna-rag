@@ -5,8 +5,43 @@ import {
   DialogActions,
   Button,
   Alert,
+  Typography,
 } from "@mui/material";
 import { CheckCircle, Error, Warning, Info } from "@mui/icons-material";
+import { styled } from "@mui/material/styles";
+
+const CompactDialogTitle = styled(DialogTitle)({
+  paddingBottom: 8,
+});
+
+const RoundedAlert = styled(Alert)({
+  borderRadius: 8,
+});
+
+const IconDialogTitle = styled(DialogTitle)({
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+});
+
+const IconWrap = styled("span", {
+  shouldForwardProp: (prop) => prop !== "iconColor",
+})<{ iconColor: string }>(({ iconColor }) => ({
+  display: "inline-flex",
+  "& .MuiSvgIcon-root": {
+    color: iconColor,
+  },
+}));
+
+const PaddedDialogContent = styled(DialogContent)({
+  paddingTop: 16,
+  paddingBottom: 16,
+});
+
+const PreWrapMessage = styled(Typography)({
+  whiteSpace: "pre-wrap",
+  margin: 0,
+});
 
 export type DialogType = "success" | "error" | "warning" | "info" | "confirm";
 
@@ -55,11 +90,9 @@ const ConfirmationDialog = ({
     <Dialog open={open} onClose={onClose} maxWidth={maxWidth} fullWidth>
       {type === "error" || type === "info" ? (
         <>
-          <DialogTitle sx={{ pb: 1 }}>{title}</DialogTitle>
+          <CompactDialogTitle>{title}</CompactDialogTitle>
           <DialogContent>
-            <Alert severity={colorMap[type]} sx={{ borderRadius: 1 }}>
-              {message}
-            </Alert>
+            <RoundedAlert severity={colorMap[type]}>{message}</RoundedAlert>
           </DialogContent>
           <DialogActions>
             <Button onClick={onClose} variant="contained" color="primary">
@@ -69,13 +102,15 @@ const ConfirmationDialog = ({
         </>
       ) : (
         <>
-          <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <IconComponent sx={{ color }} />
+          <IconDialogTitle>
+            <IconWrap iconColor={color}>
+              <IconComponent />
+            </IconWrap>
             {title}
-          </DialogTitle>
-          <DialogContent sx={{ py: 2 }}>
-            <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{message}</p>
-          </DialogContent>
+          </IconDialogTitle>
+          <PaddedDialogContent>
+            <PreWrapMessage component="p">{message}</PreWrapMessage>
+          </PaddedDialogContent>
           <DialogActions>
             <Button onClick={onClose} variant="outlined" color="inherit">
               {closeText}

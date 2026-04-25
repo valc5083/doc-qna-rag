@@ -1,5 +1,16 @@
 import { Component, type ReactNode } from "react";
 import { Box, Button, Typography } from "@mui/material";
+import { styled } from "@mui/material/styles";
+
+const ErrorContainer = styled(Box)({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: "100vh",
+  gap: 16,
+  padding: 32,
+});
 
 interface Props {
   children: ReactNode;
@@ -22,17 +33,7 @@ class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: "100vh",
-            gap: 2,
-            p: 4,
-          }}
-        >
+        <ErrorContainer>
           <Typography variant="h5" color="error">
             Something went wrong
           </Typography>
@@ -45,7 +46,7 @@ class ErrorBoundary extends Component<Props, State> {
           >
             Back to Dashboard
           </Button>
-        </Box>
+        </ErrorContainer>
       );
     }
     return this.props.children;

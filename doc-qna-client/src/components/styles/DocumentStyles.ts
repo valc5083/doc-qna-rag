@@ -2,15 +2,15 @@ import { styled } from "@mui/material/styles";
 import { Box, Button, Card, Typography, LinearProgress } from "@mui/material";
 
 // ── Page Layout ───────────────────────────────────────────────
-export const DashboardLayout = styled(Box)({
+export const DashboardLayout = styled(Box)(({ theme }) => ({
   minHeight: "100vh",
-  background: "#F0F4F8",
+  background: theme.palette.background.default,
   display: "flex",
   flexDirection: "column",
-});
+}));
 
 // ── Top Navigation Bar ────────────────────────────────────────
-export const NavBar = styled(Box)({
+export const NavBar = styled(Box)(({ theme }) => ({
   background: "linear-gradient(135deg, #1F4E79, #2E75B6)",
   padding: "16px 32px",
   display: "flex",
@@ -25,7 +25,7 @@ export const NavBar = styled(Box)({
     flexWrap: "wrap",
     gap: 8,
   },
-});
+}));
 
 export const NavTitle = styled(Typography)({
   color: "#ffffff",
@@ -112,7 +112,7 @@ export const NavCollectionButton = styled(Button)({
 });
 
 // ── Main Content Area ─────────────────────────────────────────
-export const MainContent = styled(Box)({
+export const MainContent = styled(Box)(({ theme }) => ({
   flex: 1,
   padding: "32px",
   maxWidth: 1000,
@@ -120,33 +120,40 @@ export const MainContent = styled(Box)({
   width: "100%",
 
   "@media (max-width: 600px)": {
-    padding: "14px",
+    padding: "16px",
   },
-});
+}));
 
 // ── Section Title ─────────────────────────────────────────────
-export const SectionTitle = styled(Typography)({
+export const SectionTitle = styled(Typography)(({ theme }) => ({
   fontWeight: 700,
   fontSize: "1.3rem",
-  color: "#1F4E79",
+  color: theme.palette.text.primary,
   marginBottom: 16,
-});
+}));
 
 // ── Drop Zone ─────────────────────────────────────────────────
 export const DropZoneBox = styled(Box, {
   shouldForwardProp: (prop) => prop !== "isDragActive",
-})<{ isDragActive?: boolean }>(({ isDragActive }) => ({
+})<{ isDragActive?: boolean }>(({ isDragActive, theme }) => ({
   border: `2px dashed ${isDragActive ? "#2E75B6" : "#AAAAAA"}`,
   borderRadius: 12,
   padding: "48px 32px",
   textAlign: "center",
   cursor: "pointer",
-  background: isDragActive ? "#EBF3FB" : "#FAFAFA",
+  background:
+    theme.palette.mode === "dark"
+      ? isDragActive
+        ? "#1E293B"
+        : "#111827"
+      : isDragActive
+        ? "#EBF3FB"
+        : "#FAFAFA",
   transition: "all 0.2s ease",
   marginBottom: 32,
   "&:hover": {
     borderColor: "#2E75B6",
-    background: "#EBF3FB",
+    background: theme.palette.mode === "dark" ? "#1E293B" : "#EBF3FB",
   },
 }));
 
@@ -155,17 +162,17 @@ export const DropZoneIcon = styled(Box)({
   marginBottom: 12,
 });
 
-export const DropZoneText = styled(Typography)({
+export const DropZoneText = styled(Typography)(({ theme }) => ({
   fontWeight: 600,
   fontSize: "1rem",
-  color: "#1F4E79",
+  color: theme.palette.text.primary,
   marginBottom: 4,
-});
+}));
 
-export const DropZoneSubText = styled(Typography)({
+export const DropZoneSubText = styled(Typography)(({ theme }) => ({
   fontSize: "0.8rem",
-  color: "#888888",
-});
+  color: theme.palette.text.secondary,
+}));
 
 // ── Upload Progress ───────────────────────────────────────────
 export const UploadProgressBar = styled(LinearProgress)({
@@ -178,7 +185,7 @@ export const UploadProgressBar = styled(LinearProgress)({
 });
 
 // ── Document Card ─────────────────────────────────────────────
-export const DocumentCard = styled(Card)({
+export const DocumentCard = styled(Card)(({ theme }) => ({
   borderRadius: 12,
   padding: "16px 20px",
   marginBottom: 12,
@@ -196,7 +203,9 @@ export const DocumentCard = styled(Card)({
   "&:hover": {
     boxShadow: "0 4px 16px rgba(0,0,0,0.14)",
   },
-});
+  background: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.divider}`,
+}));
 
 export const DocumentInfo = styled(Box)({
   display: "flex",
@@ -206,23 +215,23 @@ export const DocumentInfo = styled(Box)({
   minWidth: 0,
 });
 
-export const DocumentName = styled(Typography)({
+export const DocumentName = styled(Typography)(({ theme }) => ({
   display: "block",
   width: "100%",
   maxWidth: "100%",
   fontWeight: 600,
   fontSize: "0.95rem",
-  color: "#1A1A1A",
+  color: theme.palette.text.primary,
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
-});
+}));
 
-export const DocumentMeta = styled(Typography)({
+export const DocumentMeta = styled(Typography)(({ theme }) => ({
   fontSize: "0.78rem",
-  color: "#888888",
+  color: theme.palette.text.secondary,
   marginTop: 2,
-});
+}));
 
 export const DeleteButton = styled(Button)({
   minWidth: "auto",
@@ -238,8 +247,8 @@ export const DeleteButton = styled(Button)({
   },
 });
 
-export const EmptyStateBox = styled(Box)({
+export const EmptyStateBox = styled(Box)(({ theme }) => ({
   textAlign: "center",
   padding: "40px 0",
-  color: "#AAAAAA",
-});
+  color: theme.palette.text.secondary,
+}));

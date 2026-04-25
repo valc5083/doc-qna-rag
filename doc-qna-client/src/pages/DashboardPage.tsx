@@ -25,8 +25,23 @@ import {
   NavCollectionButton,
   NavActions,
 } from "../components/styles/DocumentStyles";
+import { styled } from "@mui/material/styles";
 import { DocumentListSkeleton } from "../components/skeletons/DocumentSkeleton";
 import usePageTitle from "../hooks/usePageTitle";
+import DarkModeToggle from "../components/DarkModeToggle";
+
+const AdminNavButton = styled(NavCollectionButton)({
+  background: "rgba(0, 38, 253, 0.96)",
+  borderColor: "rgba(255, 255, 255, 0.93)",
+  "&:hover": {
+    background: "rgba(93, 103, 255, 0.3)",
+  },
+});
+
+const DashboardSectionTitle = styled(SectionTitle)({
+  marginBottom: 24,
+  fontSize: "1.6rem",
+});
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -94,21 +109,14 @@ const DashboardPage = () => {
         <NavActions>
           <NavEmail>{email}</NavEmail>
           {isAdmin && (
-            <NavCollectionButton
+            <AdminNavButton
               variant="outlined"
               size="small"
               startIcon={<AdminPanelSettings />}
               onClick={() => navigate("/admin")}
-              sx={{
-                background: "rgba(0, 38, 253, 0.96)",
-                borderColor: "rgba(255, 255, 255, 0.93)",
-                "&:hover": {
-                  background: "rgba(93, 103, 255, 0.3)",
-                },
-              }}
             >
               Admin
-            </NavCollectionButton>
+            </AdminNavButton>
           )}
           <NavCollectionButton
             variant="outlined"
@@ -133,6 +141,7 @@ const DashboardPage = () => {
           >
             History
           </NavHistoryButton>
+          <DarkModeToggle />
           <NavLogoutButton
             variant="outlined"
             size="small"
@@ -145,9 +154,7 @@ const DashboardPage = () => {
 
       {/* Main Content */}
       <MainContent>
-        <SectionTitle sx={{ mb: 3, fontSize: "1.6rem" }}>
-          📄 My Documents
-        </SectionTitle>
+        <DashboardSectionTitle>📄 My Documents</DashboardSectionTitle>
 
         {/* Upload Section */}
         <DocumentUploader onUploadSuccess={handleUploadSuccess} />

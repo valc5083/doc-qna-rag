@@ -48,7 +48,8 @@ public class QnAController : ControllerBase
     [HttpGet("ask-stream")]
     public async Task AskStream(
         [FromQuery] string question,
-        [FromQuery] Guid documentId)
+        [FromQuery] Guid documentId,
+        [FromQuery] string language = "en")
     {
         if (string.IsNullOrWhiteSpace(question) || documentId == Guid.Empty)
         {
@@ -63,7 +64,7 @@ public class QnAController : ControllerBase
         var userId = User.GetUserId();
 
         await _qnAService.AskStreamAsync(
-            question, documentId, userId, Response);
+            question, documentId, language, userId, Response);
     }
 
     /// <summary>Get chat history for current user</summary>
@@ -124,5 +125,58 @@ public class QnAController : ControllerBase
         var userId = User.GetUserId();
         var analytics = await _qnAService.GetAnalyticsAsync(userId);
         return Ok(analytics);
+    }
+
+    /// <summary>Generate a summary of a document</summary>
+    [HttpPost("summarize")]
+    public async Task<IActionResult> Summarize(
+        [FromBody] SummarizeRequest request)
+    {
+        if (request.DocumentId == Guid.Empty)
+            return BadRequest(
+                new { message = "DocumentId is required." });
+
+        try
+        {
+            var userId = User.GetUserId();
+            var response = await _qnAService
+                .SummarizeAsync(request, userId);
+            return Ok(response);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>Generate suggested questions for a document</summary>
+    [HttpPost("suggest-questions")]
+    [Authorize]
+    public async Task<IActionResult> SuggestQuestions(
+        [FromBody] SuggestQuestionsRequest request)
+    {
+        if (request.DocumentId == Guid.Empty)
+            return BadRequest(
+                new { message = "DocumentId is required." });
+
+        try
+        {
+            var userId = User.GetUserId();
+            var response = await _qnAService
+                .SuggestQuestionsAsync(request, userId);
+            return Ok(response);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }

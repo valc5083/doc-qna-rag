@@ -74,6 +74,137 @@ import { CollectionListSkeleton } from "../components/skeletons/CollectionSkelet
 import usePageTitle from "../hooks/usePageTitle";
 import { qnaApi } from "../api/qnaApi";
 import ReactMarkdown from "react-markdown";
+import DarkModeToggle from "../components/DarkModeToggle";
+import { styled } from "@mui/material/styles";
+
+const BackIconButton = styled(IconButton)({
+  color: "#ffffff",
+});
+
+const HeaderFolderIcon = styled(FolderOpen)(({ theme }) => ({
+  color: theme.palette.text.primary,
+}));
+
+const EmptyFolderIcon = styled(FolderOpen)({
+  fontSize: 64,
+  marginBottom: 16,
+  opacity: 0.2,
+});
+
+const CollectionFolderIcon = styled(FolderOpen)({
+  color: "#ffffff",
+});
+
+const HeaderActionIconButton = styled(IconButton)({
+  color: "#ffffff",
+});
+
+const StyledDeleteCollectionButton = styled(DeleteCollectionButton)({
+  borderColor: "rgba(255,255,255,0.5)",
+  color: "#ffffff",
+  "&:hover": {
+    background: "rgba(255,255,255,0.1)",
+    borderColor: "#ffffff",
+  },
+});
+
+const AskPanel = styled(Box)(({ theme }) => ({
+  background: theme.palette.mode === "dark" ? "#121926" : "#F5F8FB",
+  borderBottom: `1px solid ${theme.palette.divider}`,
+  padding: 16,
+}));
+
+const RoundedQuestionField = styled(TextField)({
+  "& .MuiOutlinedInput-root": {
+    borderRadius: 8,
+  },
+});
+
+const AskButton = styled(Button)({
+  borderRadius: 8,
+  textTransform: "none",
+  fontWeight: 700,
+  background: "linear-gradient(135deg, #1F4E79, #2E75B6)",
+  minWidth: 80,
+});
+
+const AskAnswerBox = styled(Box)(({ theme }) => ({
+  background: theme.palette.background.paper,
+  borderRadius: 8,
+  padding: 16,
+  border: `1px solid ${theme.palette.divider}`,
+  fontSize: "0.9rem",
+  lineHeight: 1.6,
+  color: theme.palette.text.primary,
+}));
+
+const SourceSnippetBox = styled(Box)(({ theme }) => ({
+  background: theme.palette.mode === "dark" ? "#1E293B" : "#EBF3FB",
+  borderRadius: 8,
+  padding: 12,
+  marginBottom: 8,
+  fontSize: "0.78rem",
+  color: theme.palette.text.primary,
+}));
+
+const EmptyCollectionContent = styled(EmptyCollectionBox)({
+  paddingTop: 16,
+  paddingBottom: 16,
+});
+
+const DocumentPdfIcon = styled(PictureAsPdf)({
+  color: "#e53935",
+  fontSize: 28,
+});
+
+const StatusChip = styled(Chip)({
+  fontWeight: 600,
+  borderRadius: 6,
+});
+
+const ChatIconButton = styled(IconButton)({
+  color: "#2E75B6",
+});
+
+const RemoveIconButton = styled(IconButton)({
+  color: "#e53935",
+});
+
+const AddDocumentDialog = styled(Dialog)({
+  "& .MuiPaper-root": {
+    borderRadius: 12,
+  },
+});
+
+const AddDocumentFormControl = styled(FormControl)({
+  marginTop: 8,
+});
+
+const AddDocumentSelect = styled(Select)({
+  borderRadius: 8,
+});
+
+const DialogPdfIcon = styled(PictureAsPdf)({
+  color: "#e53935",
+  fontSize: 20,
+});
+
+const AddDocumentActions = styled(DialogActions)({
+  padding: 16,
+  gap: 8,
+});
+
+const CancelActionButton = styled(Button)({
+  borderRadius: 8,
+  textTransform: "none",
+});
+
+const ConfirmAddButton = styled(Button)({
+  borderRadius: 8,
+  textTransform: "none",
+  fontWeight: 700,
+  background: "linear-gradient(135deg, #1F4E79, #2E75B6)",
+});
 
 const CollectionsPage = () => {
   const navigate = useNavigate();
@@ -257,13 +388,14 @@ const CollectionsPage = () => {
       {/* NavBar */}
       <NavBar>
         <Box display="flex" alignItems="center" gap={2}>
-          <IconButton onClick={() => navigate(-1)} sx={{ color: "#ffffff" }}>
+          <BackIconButton onClick={() => navigate(-1)}>
             <ArrowBack />
-          </IconButton>
+          </BackIconButton>
           <NavTitle>🗂️ Collections</NavTitle>
         </Box>
         <NavActions>
           <NavEmail>{email}</NavEmail>
+          <DarkModeToggle />
           <NavLogoutButton
             variant="outlined"
             size="small"
@@ -277,7 +409,12 @@ const CollectionsPage = () => {
       <MainContent>
         {/* Create Collection Form */}
         <CreateCollectionCard>
-          <Typography fontWeight={700} fontSize="1.1rem" color="#1F4E79" mb={2}>
+          <Typography
+            fontWeight={700}
+            fontSize="1.1rem"
+            color="text.primary"
+            mb={2}
+          >
             ➕ Create New Collection
           </Typography>
           <CollectionInput
@@ -318,8 +455,8 @@ const CollectionsPage = () => {
           mb={2}
         >
           <Box display="flex" alignItems="center" gap={1}>
-            <FolderOpen sx={{ color: "#1F4E79" }} />
-            <Typography fontWeight={700} fontSize="1.2rem" color="#1F4E79">
+            <HeaderFolderIcon />
+            <Typography fontWeight={700} fontSize="1.2rem" color="text.primary">
               Your Collections ({collections.length})
             </Typography>
           </Box>
@@ -330,7 +467,7 @@ const CollectionsPage = () => {
           <CollectionListSkeleton />
         ) : collections.length === 0 ? (
           <EmptyCollectionBox>
-            <FolderOpen sx={{ fontSize: 64, mb: 2, opacity: 0.2 }} />
+            <EmptyFolderIcon />
             <Typography fontSize="1.1rem" mb={1}>
               No collections yet
             </Typography>
@@ -345,7 +482,7 @@ const CollectionsPage = () => {
               <CollectionCardHeader>
                 <CollectionHeaderInfo>
                   <Box display="flex" alignItems="center" gap={1.5}>
-                    <FolderOpen sx={{ color: "#ffffff" }} />
+                    <CollectionFolderIcon />
                     <CollectionName>{col.name}</CollectionName>
                     <DocCountBadge>
                       {col.documentCount} doc
@@ -361,24 +498,22 @@ const CollectionsPage = () => {
 
                 <CollectionHeaderActions>
                   <Tooltip title="Add document">
-                    <IconButton
+                    <HeaderActionIconButton
                       size="small"
-                      sx={{ color: "#ffffff" }}
                       onClick={() => {
                         setSelectedCollectionId(col.id);
                         setAddDocDialog(true);
                       }}
                     >
                       <Add />
-                    </IconButton>
+                    </HeaderActionIconButton>
                   </Tooltip>
 
                   <Tooltip
                     title={expandedId === col.id ? "Collapse" : "Expand"}
                   >
-                    <IconButton
+                    <HeaderActionIconButton
                       size="small"
-                      sx={{ color: "#ffffff" }}
                       onClick={() =>
                         setExpandedId((prev) =>
                           prev === col.id ? null : col.id,
@@ -386,12 +521,11 @@ const CollectionsPage = () => {
                       }
                     >
                       {expandedId === col.id ? <ExpandLess /> : <ExpandMore />}
-                    </IconButton>
+                    </HeaderActionIconButton>
                   </Tooltip>
                   <Tooltip title="Ask a question across all docs">
-                    <IconButton
+                    <HeaderActionIconButton
                       size="small"
-                      sx={{ color: "#ffffff" }}
                       onClick={() =>
                         setAskingCollectionId(
                           askingCollectionId === col.id ? null : col.id,
@@ -399,47 +533,33 @@ const CollectionsPage = () => {
                       }
                     >
                       <QuestionAnswer />
-                    </IconButton>
+                    </HeaderActionIconButton>
                   </Tooltip>
-                  <DeleteCollectionButton
+                  <StyledDeleteCollectionButton
                     disabled={deletingCollection}
                     variant="outlined"
                     size="small"
                     onClick={() => handleDelete(col.id, col.name)}
-                    sx={{
-                      borderColor: "rgba(255,255,255,0.5)",
-                      color: "#ffffff",
-                      "&:hover": {
-                        background: "rgba(255,255,255,0.1)",
-                        borderColor: "#ffffff",
-                      },
-                    }}
                   >
                     <Delete fontSize="small" />
-                  </DeleteCollectionButton>
+                  </StyledDeleteCollectionButton>
                 </CollectionHeaderActions>
               </CollectionCardHeader>
 
               {/* Q&A Panel */}
               {expandedId === col.id && askingCollectionId === col.id && (
-                <Box
-                  sx={{
-                    background: "#F5F8FB",
-                    borderBottom: "1px solid #E0E0E0",
-                    p: 2,
-                  }}
-                >
+                <AskPanel>
                   <Typography
                     fontWeight={600}
                     fontSize="0.9rem"
-                    color="#1F4E79"
+                    color="text.primary"
                     mb={1.5}
                   >
                     🔍 Ask across all {col.documentCount} document(s)
                   </Typography>
 
                   <Box display="flex" gap={1}>
-                    <TextField
+                    <RoundedQuestionField
                       fullWidth
                       size="small"
                       placeholder="Ask anything about this collection..."
@@ -448,28 +568,18 @@ const CollectionsPage = () => {
                       onKeyDown={(e) => {
                         if (e.key === "Enter") handleAskCollection(col.id);
                       }}
-                      sx={{
-                        "& .MuiOutlinedInput-root": { borderRadius: 2 },
-                      }}
                     />
-                    <Button
+                    <AskButton
                       variant="contained"
                       onClick={() => handleAskCollection(col.id)}
                       disabled={askingLoading || !collectionQuestion.trim()}
-                      sx={{
-                        borderRadius: 2,
-                        textTransform: "none",
-                        fontWeight: 700,
-                        background: "linear-gradient(135deg, #1F4E79, #2E75B6)",
-                        minWidth: 80,
-                      }}
                     >
                       {askingLoading ? (
                         <CircularProgress size={18} color="inherit" />
                       ) : (
                         "Ask"
                       )}
-                    </Button>
+                    </AskButton>
                   </Box>
 
                   {collectionAnswer && (
@@ -479,38 +589,18 @@ const CollectionsPage = () => {
                         document(s) · {collectionAnswer.sources.length} sources
                         found
                       </Typography>
-                      <Box
-                        sx={{
-                          background: "#ffffff",
-                          borderRadius: 2,
-                          p: 2,
-                          border: "1px solid #BDD7EE",
-                          fontSize: "0.9rem",
-                          lineHeight: 1.6,
-                          color: "#333333",
-                        }}
-                      >
+                      <AskAnswerBox>
                         <ReactMarkdown>{collectionAnswer.answer}</ReactMarkdown>
-                      </Box>
+                      </AskAnswerBox>
 
                       {collectionAnswer.sources.length > 0 && (
                         <Box mt={1.5}>
                           {collectionAnswer.sources.map((s, i) => (
-                            <Box
-                              key={i}
-                              sx={{
-                                background: "#EBF3FB",
-                                borderRadius: 8,
-                                p: 1.5,
-                                mb: 1,
-                                fontSize: "0.78rem",
-                                color: "#444444",
-                              }}
-                            >
+                            <SourceSnippetBox key={i}>
                               <Typography
                                 fontSize="0.75rem"
                                 fontWeight={700}
-                                color="#1F4E79"
+                                color="text.primary"
                                 mb={0.5}
                               >
                                 📄 {s.documentName} — Chunk #{s.chunkIndex}
@@ -526,30 +616,28 @@ const CollectionsPage = () => {
                               {s.text.length > 150
                                 ? s.text.substring(0, 150) + "..."
                                 : s.text}
-                            </Box>
+                            </SourceSnippetBox>
                           ))}
                         </Box>
                       )}
                     </Box>
                   )}
-                </Box>
+                </AskPanel>
               )}
               {/* Documents List */}
               <Collapse in={expandedId === col.id}>
                 <CollectionBody>
                   {col.documents.length === 0 ? (
-                    <EmptyCollectionBox sx={{ py: 2 }}>
+                    <EmptyCollectionContent>
                       <Typography fontSize="0.875rem">
                         No documents in this collection yet. Click + to add one.
                       </Typography>
-                    </EmptyCollectionBox>
+                    </EmptyCollectionContent>
                   ) : (
                     col.documents.map((doc) => (
                       <CollectionDocItem key={doc.id}>
                         <CollectionDocInfo>
-                          <PictureAsPdf
-                            sx={{ color: "#e53935", fontSize: 28 }}
-                          />
+                          <DocumentPdfIcon />
                           <Box minWidth={0}>
                             <CollectionDocTitle>
                               {doc.originalFileName}
@@ -563,27 +651,24 @@ const CollectionsPage = () => {
                         </CollectionDocInfo>
 
                         <CollectionDocActions>
-                          <Chip
+                          <StatusChip
                             label={doc.status}
                             size="small"
                             color={
                               doc.status === "ready" ? "success" : "warning"
                             }
-                            sx={{ fontWeight: 600, borderRadius: 6 }}
                           />
                           <Tooltip title="Chat with this doc">
-                            <IconButton
+                            <ChatIconButton
                               size="small"
-                              sx={{ color: "#2E75B6" }}
                               onClick={() => navigate(`/chat/${doc.id}`)}
                             >
                               <Chat fontSize="small" />
-                            </IconButton>
+                            </ChatIconButton>
                           </Tooltip>
                           <Tooltip title="Remove from collection">
-                            <IconButton
+                            <RemoveIconButton
                               size="small"
-                              sx={{ color: "#e53935" }}
                               onClick={() =>
                                 handleRemoveDocument(
                                   col.id,
@@ -593,7 +678,7 @@ const CollectionsPage = () => {
                               }
                             >
                               <RemoveCircleOutline fontSize="small" />
-                            </IconButton>
+                            </RemoveIconButton>
                           </Tooltip>
                         </CollectionDocActions>
                       </CollectionDocItem>
@@ -607,24 +692,22 @@ const CollectionsPage = () => {
       </MainContent>
 
       {/* Add Document Dialog */}
-      <Dialog
+      <AddDocumentDialog
         open={addDocDialog}
         onClose={() => setAddDocDialog(false)}
         maxWidth="sm"
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle fontWeight={700} color="#1F4E79">
+        <DialogTitle fontWeight={700} color="text.primary">
           Add Document to Collection
         </DialogTitle>
         <DialogContent>
-          <FormControl fullWidth sx={{ mt: 1 }}>
+          <AddDocumentFormControl fullWidth>
             <InputLabel>Select Document</InputLabel>
-            <Select
+            <AddDocumentSelect
               value={selectedDocId}
               label="Select Document"
               onChange={(e) => setSelectedDocId(e.target.value)}
-              sx={{ borderRadius: 2 }}
             >
               {documents.length === 0 ? (
                 <MenuItem disabled>No ready documents available</MenuItem>
@@ -632,41 +715,32 @@ const CollectionsPage = () => {
                 documents.map((doc) => (
                   <MenuItem key={doc.id} value={doc.id}>
                     <Box display="flex" alignItems="center" gap={1}>
-                      <PictureAsPdf sx={{ color: "#e53935", fontSize: 20 }} />
+                      <DialogPdfIcon />
                       {doc.originalFileName}
                     </Box>
                   </MenuItem>
                 ))
               )}
-            </Select>
-          </FormControl>
+            </AddDocumentSelect>
+          </AddDocumentFormControl>
         </DialogContent>
-        <DialogActions sx={{ p: 2, gap: 1 }}>
-          <Button
-            onClick={() => setAddDocDialog(false)}
-            sx={{ borderRadius: 2, textTransform: "none" }}
-          >
+        <AddDocumentActions>
+          <CancelActionButton onClick={() => setAddDocDialog(false)}>
             Cancel
-          </Button>
-          <Button
+          </CancelActionButton>
+          <ConfirmAddButton
             variant="contained"
             onClick={handleAddDocument}
             disabled={addingDoc || !selectedDocId}
-            sx={{
-              borderRadius: 2,
-              textTransform: "none",
-              fontWeight: 700,
-              background: "linear-gradient(135deg, #1F4E79, #2E75B6)",
-            }}
           >
             {addingDoc ? (
               <CircularProgress size={20} color="inherit" />
             ) : (
               "Add Document"
             )}
-          </Button>
-        </DialogActions>
-      </Dialog>
+          </ConfirmAddButton>
+        </AddDocumentActions>
+      </AddDocumentDialog>
       <ConfirmationDialog
         open={showDeleteConfirm}
         type="confirm"

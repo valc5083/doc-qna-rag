@@ -4,6 +4,7 @@ public class AskRequest
 {
     public string Question { get; set; } = string.Empty;
     public Guid DocumentId { get; set; }
+    public string Language { get; set; } = "en";
 }
 
 public class SourceChunk
@@ -11,6 +12,7 @@ public class SourceChunk
     public string Text { get; set; } = string.Empty;
     public float Score { get; set; }
     public int ChunkIndex { get; set; }
+    public List<string> CitedSentences { get; set; } = new();
 }
 
 public class AskResponse
@@ -19,6 +21,7 @@ public class AskResponse
     public List<SourceChunk> Sources { get; set; } = new();
     public List<ImageSourceChunk> ImageSources { get; set; } = new();
     public string Question { get; set; } = string.Empty;
+    public ConfidenceScore? Confidence { get; set; }
     public DateTime CreatedAt { get; set; }
     public string AnswerSource { get; set; } = "document"; // "document" or "ai_fallback"
     public string? FallbackReason { get; set; } // Why fallback was used
@@ -97,4 +100,48 @@ public class TopDocument
     public string DocumentName { get; set; } = string.Empty;
     public int QuestionCount { get; set; }
     public Guid DocumentId { get; set; }
+}
+
+public class SummarizeRequest
+{
+    public Guid DocumentId { get; set; }
+    public string Style { get; set; } = "concise";
+}
+
+public class SummarizeResponse
+{
+    public string Summary { get; set; } = string.Empty;
+    public string Style { get; set; } = string.Empty;
+    public int ChunksAnalyzed { get; set; }
+    public Guid DocumentId { get; set; }
+    public string DocumentName { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+}
+
+public class SuggestQuestionsRequest
+{
+    public Guid DocumentId { get; set; }
+    public int Count { get; set; } = 5;
+}
+
+public class SuggestQuestionsResponse
+{
+    public List<SuggestedQuestion> Questions { get; set; } = new();
+    public Guid DocumentId { get; set; }
+    public string DocumentName { get; set; } = string.Empty;
+}
+
+public class SuggestedQuestion
+{
+    public string Question { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty;
+}
+
+public class ConfidenceScore
+{
+    public float Overall { get; set; }
+    // 0.0 to 1.0
+    public string Level { get; set; } = string.Empty;
+    // "High", "Medium", "Low"
+    public string Explanation { get; set; } = string.Empty;
 }
