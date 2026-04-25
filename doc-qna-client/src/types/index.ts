@@ -34,19 +34,22 @@ export interface DocumentListResponse {
 
 export interface SourceChunk {
   chunkIndex: number;
+  citedSentences?: string[];
   score: number;
   text: string;
 }
 
 export interface AskRequest {
   documentId: string;
+  language?: string;
   question: string;
 }
 
 export interface AskResponse {
   answer: string;
-  answerSource: 'document' | 'ai_fallback';
+  answerSource: "document" | "ai_fallback";
   createdAt: string;
+  confidence?: ConfidenceScore;
   fallbackReason?: string;
   imageSources?: ImageSourceChunk[];
   question: string;
@@ -61,14 +64,15 @@ export interface ChatHistoryItem {
   id: string;
   question: string;
   sources: SourceChunk[];
-  answerSource: 'document' | 'ai_fallback';
+  answerSource: "document" | "ai_fallback";
   fallbackReason?: string;
 }
 
 export interface ChatBubble {
-  answerSource?: 'document' | 'ai_fallback';
+  answerSource?: "document" | "ai_fallback";
   content: string;
   createdAt: string;
+  confidence?: ConfidenceScore;
   fallbackReason?: string;
   id: string;
   imageSources?: ImageSourceChunk[];
@@ -194,4 +198,67 @@ export interface ImageSourceChunk {
   imageIndex: number;
   pageNumber: number;
   score: number;
+}
+
+// Summarization
+export interface SummarizeRequest {
+  documentId: string;
+  style: "concise" | "detailed" | "bullet_points" | "executive";
+}
+
+export interface SummarizeResponse {
+  chunksAnalyzed: number;
+  createdAt: string;
+  documentId: string;
+  documentName: string;
+  style: string;
+  summary: string;
+}
+
+// Suggested Questions
+export interface SuggestedQuestion {
+  category: string;
+  question: string;
+}
+
+export interface SuggestQuestionsResponse {
+  documentId: string;
+  documentName: string;
+  questions: SuggestedQuestion[];
+}
+
+// Confidence
+export interface ConfidenceScore {
+  explanation: string;
+  level: "High" | "Medium" | "Low";
+  overall: number;
+}
+
+// Share
+export interface CreateShareRequest {
+  documentId: string;
+  expiryDays: number;
+  messages: ShareChatMessage[];
+  title: string;
+}
+
+export interface ShareChatMessage {
+  content: string;
+  sources?: SourceChunk[];
+  type: "user" | "assistant";
+}
+
+export interface ShareResponse {
+  expiresAt: string;
+  shareToken: string;
+  shareUrl: string;
+}
+
+export interface SharedChatResponse {
+  createdAt: string;
+  documentName: string;
+  expiresAt: string;
+  messages: ShareChatMessage[];
+  title: string;
+  viewCount: number;
 }

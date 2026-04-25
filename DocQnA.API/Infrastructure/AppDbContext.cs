@@ -10,10 +10,12 @@ public class AppDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
-    public DbSet<Collection> Collections => Set<Collection>();           // ← add
-    public DbSet<CollectionDocument> CollectionDocuments               // ← add
+    public DbSet<Collection> Collections => Set<Collection>();          
+    public DbSet<CollectionDocument> CollectionDocuments               
         => Set<CollectionDocument>();
     public DbSet<DocumentImage> DocumentImages => Set<DocumentImage>();
+
+    public DbSet<SharedChat> SharedChats => Set<SharedChat>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -72,5 +74,22 @@ public class AppDbContext : DbContext
             .WithMany()
             .HasForeignKey(i => i.DocumentId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // In OnModelCreating:
+        modelBuilder.Entity<SharedChat>()
+            .HasOne(s => s.User)
+            .WithMany()
+            .HasForeignKey(s => s.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<SharedChat>()
+            .HasOne(s => s.Document)
+            .WithMany()
+            .HasForeignKey(s => s.DocumentId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<SharedChat>()
+            .HasIndex(s => s.ShareToken)
+            .IsUnique();
     }
 }

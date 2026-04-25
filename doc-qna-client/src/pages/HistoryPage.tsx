@@ -21,6 +21,7 @@ import {
   Warning,
   CheckCircle,
 } from "@mui/icons-material";
+import { styled } from "@mui/material/styles";
 import ReactMarkdown from "react-markdown";
 import { qnaApi } from "../api/qnaApi";
 import type { ChatHistoryItem } from "../types";
@@ -57,6 +58,76 @@ import {
 import ConfirmationDialog from "../components/ConfirmationDialog";
 import { HistoryListSkeleton } from "../components/skeletons/HistorySkeletons";
 import usePageTitle from "../hooks/usePageTitle";
+import DarkModeToggle from "../components/DarkModeToggle";
+
+const BackIconButton = styled(IconButton)({
+  color: "#ffffff",
+});
+
+const HistoryTitleIcon = styled(History)({
+  color: "#1F4E79",
+});
+
+const EmptyQuestionIcon = styled(QuestionAnswer)({
+  fontSize: 64,
+  marginBottom: 16,
+  opacity: 0.2,
+});
+
+const DashboardButton = styled(ClearButton)({
+  color: "#2E75B6",
+  borderColor: "#2E75B6",
+});
+
+const DocPdfIcon = styled(PictureAsPdf)({
+  fontSize: 12,
+});
+
+const ChatAgainButton = styled(IconButton)({
+  color: "#2E75B6",
+});
+
+const DeleteConversationButton = styled(IconButton)({
+  color: "#e53935",
+});
+
+const AnswerSourceRow = styled(Box)({
+  display: "flex",
+  gap: 8,
+  marginBottom: 8,
+  marginTop: 8,
+});
+
+const AnswerWarningIcon = styled(Warning)({
+  fontSize: 12,
+});
+
+const AnswerCheckIcon = styled(CheckCircle)({
+  fontSize: 12,
+});
+
+const CollapsibleAnswerAI = styled(AnswerTextAI, {
+  shouldForwardProp: (prop) => prop !== "isExpanded",
+})<{ isExpanded: boolean }>(({ isExpanded }) => ({
+  maxHeight: isExpanded ? "none" : 72,
+  overflow: isExpanded ? "visible" : "hidden",
+}));
+
+const CollapsibleAnswerDocument = styled(AnswerTextDocument, {
+  shouldForwardProp: (prop) => prop !== "isExpanded",
+})<{ isExpanded: boolean }>(({ isExpanded }) => ({
+  maxHeight: isExpanded ? "none" : 72,
+  overflow: isExpanded ? "visible" : "hidden",
+}));
+
+const MarkdownAnswer = styled(Box)({
+  "& p": { margin: 0 },
+  "& p + p": { marginTop: 8 },
+});
+
+const AnswerMetaRow = styled(MetaRow)({
+  marginTop: 12,
+});
 
 const HistoryPage = () => {
   const navigate = useNavigate();
@@ -75,7 +146,7 @@ const HistoryPage = () => {
       setLoading(true);
       const data = await qnaApi.getHistory(50);
       setHistory(data);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load history.");
     } finally {
       setLoading(false);
@@ -128,7 +199,6 @@ const HistoryPage = () => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
 
-  // ── Stats ──────────────────────────────────────────────────
   const totalQuestions = history.length;
   const uniqueDocs = new Set(history.map((h) => h.documentId).filter(Boolean))
     .size;
@@ -142,24 +212,27 @@ const HistoryPage = () => {
 
   return (
     <HistoryLayout>
-      {/* Nav Bar */}
       <NavBar>
         <Box display="flex" alignItems="center" gap={2}>
-          <IconButton onClick={() => navigate(-1)} sx={{ color: "#ffffff" }}>
+          <BackIconButton onClick={() => navigate(-1)}>
             <ArrowBack />
-          </IconButton>
+          </BackIconButton>
           <NavTitle>📜 Chat History</NavTitle>
         </Box>
         <NavActions>
           <NavEmail>{email}</NavEmail>
-          <NavLogoutButton variant="outlined" size="small" onClick={handleLogout}>
+          <DarkModeToggle />
+          <NavLogoutButton
+            variant="outlined"
+            size="small"
+            onClick={handleLogout}
+          >
             Logout
           </NavLogoutButton>
         </NavActions>
       </NavBar>
 
       <MainContent>
-        {/* Stats Row */}
         {!loading && history.length > 0 && (
           <StatsRow>
             <StatCard>
@@ -177,7 +250,6 @@ const HistoryPage = () => {
           </StatsRow>
         )}
 
-        {/* Header Row */}
         <Box
           display="flex"
           alignItems="center"
@@ -185,8 +257,8 @@ const HistoryPage = () => {
           mb={3}
         >
           <Box display="flex" alignItems="center" gap={1}>
-            <History sx={{ color: "#1F4E79" }} />
-            <Typography fontWeight={700} fontSize="1.2rem" color="#1F4E79">
+            <HistoryTitleIcon />
+            <Typography fontWeight={700} fontSize="1.2rem" color="text.primary">
               Your Conversations
             </Typography>
           </Box>
@@ -202,35 +274,32 @@ const HistoryPage = () => {
           )}
         </Box>
 
-        {/* Loading */}
         {loading ? (
           <HistoryListSkeleton />
         ) : history.length === 0 ? (
           <EmptyHistoryBox>
-            <QuestionAnswer sx={{ fontSize: 64, mb: 2, opacity: 0.2 }} />
+            <EmptyQuestionIcon />
             <Typography fontSize="1.1rem" mb={1}>
               No conversations yet
             </Typography>
             <Typography fontSize="0.875rem" mb={3}>
               Upload a PDF and start asking questions!
             </Typography>
-            <ClearButton
+            <DashboardButton
               variant="outlined"
               onClick={() => navigate("/dashboard")}
-              sx={{ color: "#2E75B6", borderColor: "#2E75B6" }}
             >
               Go to Dashboard
-            </ClearButton>
+            </DashboardButton>
           </EmptyHistoryBox>
         ) : (
           history.map((item) => (
             <HistoryCard key={item.id}>
-              {/* Card Header */}
               <HistoryCardHeader>
                 <Box display="flex" alignItems="center" gap={1} flex={1}>
                   {item.documentName && (
                     <DocBadge>
-                      <PictureAsPdf sx={{ fontSize: 12 }} />
+                      <DocPdfIcon />
                       {item.documentName.length > 30
                         ? item.documentName.substring(0, 30) + "..."
                         : item.documentName}
@@ -248,10 +317,9 @@ const HistoryPage = () => {
                 </Box>
 
                 <Box display="flex" alignItems="center" gap={1}>
-                  {/* Chat again button */}
                   {item.documentId && (
                     <Tooltip title="Continue chatting">
-                      <IconButton
+                      <ChatAgainButton
                         size="small"
                         onClick={() =>
                           navigate(`/chat/${item.documentId}`, {
@@ -262,29 +330,26 @@ const HistoryPage = () => {
                             },
                           })
                         }
-                        sx={{ color: "#2E75B6" }}
                       >
                         <Chat fontSize="small" />
-                      </IconButton>
+                      </ChatAgainButton>
                     </Tooltip>
                   )}
 
                   <Tooltip title="Delete this conversation">
-                    <IconButton
+                    <DeleteConversationButton
                       size="small"
                       onClick={() => handleDeleteOne(item.id)}
                       disabled={deletingId === item.id}
-                      sx={{ color: "#e53935" }}
                     >
                       {deletingId === item.id ? (
                         <CircularProgress size={14} />
                       ) : (
                         <Delete fontSize="small" />
                       )}
-                    </IconButton>
+                    </DeleteConversationButton>
                   </Tooltip>
 
-                  {/* Expand toggle */}
                   <Tooltip
                     title={
                       expandedId === item.id ? "Collapse" : "Show full answer"
@@ -304,76 +369,55 @@ const HistoryPage = () => {
                 </Box>
               </HistoryCardHeader>
 
-              {/* Card Body */}
               <HistoryCardBody>
-                {/* Question */}
                 <QuestionText>
                   <span style={{ fontSize: "1.1rem" }}>🙋</span>
                   {item.question}
                 </QuestionText>
 
-                {/* Answer Source Badge */}
-                <Box sx={{ display: 'flex', gap: 1, mb: 1, mt: 1 }}>
-                  {item.answerSource === 'ai_fallback' ? (
+                <AnswerSourceRow>
+                  {item.answerSource === "ai_fallback" ? (
                     <AISourceBadge>
-                      <Warning sx={{ fontSize: 12 }} />
+                      <AnswerWarningIcon />
                       AI General Knowledge
                     </AISourceBadge>
                   ) : (
                     <DocumentSourceBadge>
-                      <CheckCircle sx={{ fontSize: 12 }} />
+                      <AnswerCheckIcon />
                       From Document
                     </DocumentSourceBadge>
                   )}
-                </Box>
+                </AnswerSourceRow>
 
-                {/* Answer preview or full */}
                 <Collapse in={expandedId === item.id} collapsedSize={72}>
-                  {item.answerSource === 'ai_fallback' ? (
-                    <AnswerTextAI
-                      sx={{
-                        maxHeight: expandedId === item.id ? "none" : 72,
-                        overflow: expandedId === item.id ? "visible" : "hidden",
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          "& p": { margin: 0 },
-                          "& p + p": { marginTop: 1 },
-                        }}
-                      >
+                  {item.answerSource === "ai_fallback" ? (
+                    <CollapsibleAnswerAI isExpanded={expandedId === item.id}>
+                      <MarkdownAnswer>
                         <ReactMarkdown>{item.answer}</ReactMarkdown>
-                      </Box>
-                    </AnswerTextAI>
+                      </MarkdownAnswer>
+                    </CollapsibleAnswerAI>
                   ) : (
-                    <AnswerTextDocument
-                      sx={{
-                        maxHeight: expandedId === item.id ? "none" : 72,
-                        overflow: expandedId === item.id ? "visible" : "hidden",
-                      }}
+                    <CollapsibleAnswerDocument
+                      isExpanded={expandedId === item.id}
                     >
-                      <Box
-                        sx={{
-                          "& p": { margin: 0 },
-                          "& p + p": { marginTop: 1 },
-                        }}
-                      >
+                      <MarkdownAnswer>
                         <ReactMarkdown>{item.answer}</ReactMarkdown>
-                      </Box>
-                    </AnswerTextDocument>
+                      </MarkdownAnswer>
+                    </CollapsibleAnswerDocument>
                   )}
                 </Collapse>
 
-                {/* Meta info */}
-                <MetaRow sx={{ mt: 1.5 }}>
-                  {item.answerSource === 'document' && item.sources && item.sources.length > 0 && (
-                    <MetaText>
-                      📎 {item.sources.length} source
-                      {item.sources.length > 1 ? "s" : ""} used
-                    </MetaText>
-                  )}
+                <AnswerMetaRow>
+                  {item.answerSource === "document" &&
+                    item.sources &&
+                    item.sources.length > 0 && (
+                      <MetaText>
+                        📎 {item.sources.length} source
+                        {item.sources.length > 1 ? "s" : ""} used
+                      </MetaText>
+                    )}
                   <MetaText>💬 {item.answer.split(" ").length} words</MetaText>
-                </MetaRow>
+                </AnswerMetaRow>
               </HistoryCardBody>
             </HistoryCard>
           ))

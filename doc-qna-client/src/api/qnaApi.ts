@@ -2,12 +2,16 @@ import toast from "react-hot-toast";
 import { api } from "./authApi";
 import type {
   AskCollectionRequest,
+  ConfidenceScore,
   AskRequest,
   AskResponse,
   ChatHistoryItem,
   CollectionAskResponse,
   ImageSourceChunk,
   SourceChunk,
+  SuggestQuestionsResponse,
+  SummarizeRequest,
+  SummarizeResponse,
   UserAnalytics,
 } from "../types";
 
@@ -22,6 +26,7 @@ export const qnaApi = {
     question: string,
     documentId: string,
     token: string,
+    language: string,
     onToken: (token: string) => void,
     onSources: (sources: SourceChunk[]) => void,
     onImageSources: (imageSources: ImageSourceChunk[]) => void,
@@ -30,6 +35,7 @@ export const qnaApi = {
       fallbackReason?: string,
     ) => void,
     onStatus: (status: string) => void,
+    onConfidence: (confidence: ConfidenceScore) => void,
     onDone: () => void,
     onError: (error: string) => void,
   ): EventSource => {
@@ -42,6 +48,7 @@ export const qnaApi = {
       `${baseUrl}/api/qna/ask-stream` +
       `?question=${encodeURIComponent(question)}` +
       `&documentId=${encodeURIComponent(documentId)}` +
+      `&language=${encodeURIComponent(language)}` +
       `&access_token=${encodeURIComponent(token)}`;
 
     const eventSource = new EventSource(url);
@@ -69,6 +76,13 @@ export const qnaApi = {
 
     eventSource.addEventListener("status", (e) => {
       onStatus((e as MessageEvent).data);
+    });
+
+    eventSource.addEventListener("confidence", (e) => {
+      try {
+        const confidence = JSON.parse((e as MessageEvent).data);
+        onConfidence?.(confidence);
+      } catch {}
     });
 
     eventSource.addEventListener("done", () => {
@@ -125,6 +139,22 @@ export const qnaApi = {
 
   getAnalytics: async (): Promise<UserAnalytics> => {
     const res = await api.get<UserAnalytics>("/qna/analytics");
+    return res.data;
+  },
+
+  summarize: async (data: SummarizeRequest): Promise<SummarizeResponse> => {
+    const res = await api.post<SummarizeResponse>("/qna/summarize", data);
+    return res.data;
+  },
+
+  suggestQuestions: async (
+    documentId: string,
+    count = 5,
+  ): Promise<SuggestQuestionsResponse> => {
+    const res = await api.post<SuggestQuestionsResponse>(
+      "/qna/suggest-questions",
+      { documentId, count },
+    );
     return res.data;
   },
 };

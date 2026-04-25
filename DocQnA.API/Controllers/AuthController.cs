@@ -1,4 +1,6 @@
 ﻿using DocQnA.API.DTOs;
+using DocQnA.API.Extensions;
+using DocQnA.API.Infrastructure;
 using DocQnA.API.Services;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
@@ -64,4 +66,37 @@ public class AuthController : ControllerBase
         await _authService.LogoutAsync(refreshToken);
         return NoContent();
     }
+
+    [HttpPut("webhook")]
+    public async Task<IActionResult> UpdateWebhook(
+    [FromBody] UpdateWebhookRequest request,
+    [FromServices] AppDbContext db)
+    {
+        var userId = User.GetUserId();
+        var user = await db.Users.FindAsync(userId);
+        if (user == null) return NotFound();
+
+        user.WebhookUrl = request.WebhookUrl;
+        await db.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Webhook URL updated.",
+            webhookUrl = user.WebhookUrl
+        });
+    }
+
+    [HttpPost("webhook/test")]
+    public async Task<IActionResult> TestWebhook(
+        [FromBody] WebhookTestRequest request,
+        [FromServices] WebhookService webhookService)
+    {
+        await webhookService.SendAsync(
+            request.WebhookUrl,
+            "test",
+            new { message = "DocQnA webhook test successful!" });
+
+        return Ok(new { message = "Test webhook sent." });
+    }
+
 }

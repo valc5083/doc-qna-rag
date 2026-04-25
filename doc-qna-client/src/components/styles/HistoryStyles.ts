@@ -2,34 +2,36 @@ import { styled } from "@mui/material/styles";
 import { Box, Button, Card, Typography } from "@mui/material";
 
 // ── Page Layout ───────────────────────────────────────────────
-export const HistoryLayout = styled(Box)({
+export const HistoryLayout = styled(Box)(({ theme }) => ({
   minHeight: "100vh",
-  background: "#F0F4F8",
+  background: theme.palette.background.default,
   display: "flex",
   flexDirection: "column",
-});
+}));
 
 // ── History Card ──────────────────────────────────────────────
-export const HistoryCard = styled(Card)({
+export const HistoryCard = styled(Card)(({ theme }) => ({
   borderRadius: 12,
   marginBottom: 16,
   boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
   overflow: "hidden",
   transition: "box-shadow 0.2s",
+  background: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.divider}`,
   "&:hover": {
     boxShadow: "0 4px 16px rgba(0,0,0,0.14)",
   },
-});
+}));
 
 // ── Card Header ───────────────────────────────────────────────
-export const HistoryCardHeader = styled(Box)({
-  background: "#F5F8FB",
+export const HistoryCardHeader = styled(Box)(({ theme }) => ({
+  background: theme.palette.mode === "dark" ? "#121926" : "#F5F8FB",
   padding: "12px 20px",
-  borderBottom: "1px solid #E8EEF4",
+  borderBottom: `1px solid ${theme.palette.divider}`,
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-});
+}));
 
 // ── Card Body ─────────────────────────────────────────────────
 export const HistoryCardBody = styled(Box)({
@@ -37,23 +39,23 @@ export const HistoryCardBody = styled(Box)({
 });
 
 // ── Question Text ─────────────────────────────────────────────
-export const QuestionText = styled(Typography)({
+export const QuestionText = styled(Typography)(({ theme }) => ({
   fontWeight: 700,
   fontSize: "1rem",
-  color: "#1F4E79",
+  color: theme.palette.text.primary,
   marginBottom: 8,
   display: "flex",
   alignItems: "flex-start",
   gap: 8,
-});
+}));
 
 // ── Answer Text ───────────────────────────────────────────────
-export const AnswerText = styled(Typography)({
+export const AnswerText = styled(Typography)(({ theme }) => ({
   fontSize: "0.9rem",
-  color: "#444444",
+  color: theme.palette.text.primary,
   lineHeight: 1.6,
   marginBottom: 8,
-});
+}));
 
 // ── Meta Row ──────────────────────────────────────────────────
 export const MetaRow = styled(Box)({
@@ -64,23 +66,23 @@ export const MetaRow = styled(Box)({
 });
 
 // ── Meta Text ─────────────────────────────────────────────────
-export const MetaText = styled(Typography)({
+export const MetaText = styled(Typography)(({ theme }) => ({
   fontSize: "0.75rem",
-  color: "#888888",
-});
+  color: theme.palette.text.secondary,
+}));
 
 // ── Doc Badge ─────────────────────────────────────────────────
-export const DocBadge = styled(Box)({
+export const DocBadge = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: 4,
-  background: "#EBF3FB",
+  background: theme.palette.mode === "dark" ? "#1E293B" : "#EBF3FB",
   borderRadius: 6,
   padding: "2px 10px",
   fontSize: "0.75rem",
-  color: "#2E75B6",
+  color: theme.palette.mode === "dark" ? "#93C5FD" : "#2E75B6",
   fontWeight: 600,
-});
+}));
 
 // ── Clear Button ──────────────────────────────────────────────
 export const ClearButton = styled(Button)({
@@ -96,11 +98,11 @@ export const ClearButton = styled(Button)({
 });
 
 // ── Empty State ───────────────────────────────────────────────
-export const EmptyHistoryBox = styled(Box)({
+export const EmptyHistoryBox = styled(Box)(({ theme }) => ({
   textAlign: "center",
   padding: "80px 0",
-  color: "#AAAAAA",
-});
+  color: theme.palette.text.secondary,
+}));
 
 // ── Stats Row ─────────────────────────────────────────────────
 export const StatsRow = styled(Box)({
@@ -111,28 +113,29 @@ export const StatsRow = styled(Box)({
 });
 
 // ── Stat Card ─────────────────────────────────────────────────
-export const StatCard = styled(Box)({
-  background: "#ffffff",
+export const StatCard = styled(Box)(({ theme }) => ({
+  background: theme.palette.background.paper,
   borderRadius: 12,
   padding: "16px 24px",
   flex: 1,
   minWidth: 140,
   boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
   textAlign: "center",
-});
+  border: `1px solid ${theme.palette.divider}`,
+}));
 
-export const StatNumber = styled(Typography)({
+export const StatNumber = styled(Typography)(({ theme }) => ({
   fontSize: "2rem",
   fontWeight: 700,
-  color: "#1F4E79",
+  color: theme.palette.text.primary,
   lineHeight: 1,
   marginBottom: 4,
-});
+}));
 
-export const StatLabel = styled(Typography)({
+export const StatLabel = styled(Typography)(({ theme }) => ({
   fontSize: "0.8rem",
-  color: "#888888",
-});
+  color: theme.palette.text.secondary,
+}));
 
 // ── Answer Source Badges ──────────────────────────────────────
 export const AnswerSourceBadge = styled(Box)({
@@ -158,14 +161,14 @@ export const AISourceBadge = styled(AnswerSourceBadge)({
 });
 
 // ── Answer Text Variants ──────────────────────────────────────
-export const AnswerTextDocument = styled(AnswerText)({
+export const AnswerTextDocument = styled(AnswerText)(({ theme }) => ({
   borderLeft: "3px solid #2e7d32",
   paddingLeft: 16,
-  backgroundColor: "#f1f8f4",
-});
+  backgroundColor: theme.palette.mode === "dark" ? "#102318" : "#f1f8f4",
+}));
 
-export const AnswerTextAI = styled(AnswerText)({
+export const AnswerTextAI = styled(AnswerText)(({ theme }) => ({
   borderLeft: "3px solid #ed6c02",
   paddingLeft: 16,
-  backgroundColor: "#fff4e5",
-});
+  backgroundColor: theme.palette.mode === "dark" ? "#2C1B08" : "#fff4e5",
+}));

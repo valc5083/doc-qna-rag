@@ -52,6 +52,54 @@ import {
 } from "../components/styles/AdminStyles";
 import usePageTitle from "../hooks/usePageTitle";
 import ConfirmationDialog from "../components/ConfirmationDialog";
+import { styled } from "@mui/material/styles";
+
+const NavIconButton = styled(IconButton)({
+  color: "#8B8FA8",
+});
+
+const LogoutActionButton = styled(Button)({
+  color: "#8B8FA8",
+  borderColor: "#2A2D3E",
+  textTransform: "none",
+  borderRadius: 8,
+  "&:hover": {
+    borderColor: "#8B8FA8",
+    background: "transparent",
+  },
+});
+
+const LoadingSpinner = styled(CircularProgress)({
+  color: "#2E75B6",
+});
+
+const UsersTableHeader = styled(TableHeader)({
+  gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr 60px",
+});
+
+const UsersTableRow = styled(TableRow)({
+  gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr 60px",
+});
+
+const DocumentsTableHeader = styled(TableHeader)({
+  gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr 60px",
+});
+
+const DocumentsTableRow = styled(TableRow)({
+  gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr 60px",
+});
+
+const ConversationsTableHeader = styled(TableHeader)({
+  gridTemplateColumns: "2fr 2fr 1.5fr 1fr 1fr",
+});
+
+const ConversationsTableRow = styled(TableRow)({
+  gridTemplateColumns: "2fr 2fr 1.5fr 1fr 1fr",
+});
+
+const DangerIconButton = styled(IconButton)({
+  color: "#F44336",
+});
 
 type Tab = "overview" | "users" | "documents" | "conversations";
 
@@ -184,49 +232,32 @@ const AdminPage = () => {
       {/* Nav */}
       <AdminNav>
         <AdminNavLeft>
-          <IconButton
-            onClick={() => navigate("/dashboard")}
-            sx={{ color: "#8B8FA8" }}
-          >
+          <NavIconButton onClick={() => navigate("/dashboard")}>
             <ArrowBack />
-          </IconButton>
+          </NavIconButton>
           <AdminNavTitle>🛡️ Admin Dashboard</AdminNavTitle>
         </AdminNavLeft>
         <AdminNavActions>
           <AdminNavEmail>{email}</AdminNavEmail>
           <Tooltip title="Refresh data">
-            <IconButton
-              onClick={fetchAll}
-              sx={{ color: "#8B8FA8" }}
-              disabled={loading}
-            >
+            <NavIconButton onClick={fetchAll} disabled={loading}>
               <Refresh />
-            </IconButton>
+            </NavIconButton>
           </Tooltip>
-          <Button
+          <LogoutActionButton
             variant="outlined"
             size="small"
             onClick={handleLogout}
-            sx={{
-              color: "#8B8FA8",
-              borderColor: "#2A2D3E",
-              textTransform: "none",
-              borderRadius: 2,
-              "&:hover": {
-                borderColor: "#8B8FA8",
-                background: "transparent",
-              },
-            }}
           >
             Logout
-          </Button>
+          </LogoutActionButton>
         </AdminNavActions>
       </AdminNav>
 
       <AdminContent>
         {loading ? (
           <Box textAlign="center" py={8}>
-            <CircularProgress sx={{ color: "#2E75B6" }} />
+            <LoadingSpinner />
             <Typography color="#8B8FA8" mt={2}>
               Loading admin data...
             </Typography>
@@ -344,11 +375,7 @@ const AdminPage = () => {
                   <AdminCardTitle>👥 Users ({users.length})</AdminCardTitle>
                 </AdminCardHeader>
                 <AdminTable>
-                  <TableHeader
-                    sx={{
-                      gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr 60px",
-                    }}
-                  >
+                  <UsersTableHeader>
                     <span>Email</span>
                     <span>Joined</span>
                     <span>Docs</span>
@@ -356,14 +383,9 @@ const AdminPage = () => {
                     <span>Storage</span>
                     <span>Last Active</span>
                     <span></span>
-                  </TableHeader>
+                  </UsersTableHeader>
                   {users.map((user) => (
-                    <TableRow
-                      key={user.id}
-                      sx={{
-                        gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr 60px",
-                      }}
-                    >
+                    <UsersTableRow key={user.id}>
                       <Typography fontSize="0.875rem" color="#ffffff" noWrap>
                         {user.email}
                       </Typography>
@@ -381,15 +403,14 @@ const AdminPage = () => {
                           : "—"}
                       </span>
                       <Tooltip title="Delete user + all data">
-                        <IconButton
+                        <DangerIconButton
                           size="small"
                           onClick={() => handleDeleteUser(user.id, user.email)}
-                          sx={{ color: "#F44336" }}
                         >
                           <Delete fontSize="small" />
-                        </IconButton>
+                        </DangerIconButton>
                       </Tooltip>
-                    </TableRow>
+                    </UsersTableRow>
                   ))}
                 </AdminTable>
               </AdminCard>
@@ -407,25 +428,16 @@ const AdminPage = () => {
                   </AdminCardTitle>
                 </AdminCardHeader>
                 <AdminTable>
-                  <TableHeader
-                    sx={{
-                      gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr 60px",
-                    }}
-                  >
+                  <DocumentsTableHeader>
                     <span>File Name</span>
                     <span>User</span>
                     <span>Status</span>
                     <span>Chunks</span>
                     <span>Size</span>
                     <span></span>
-                  </TableHeader>
+                  </DocumentsTableHeader>
                   {documents.map((doc) => (
-                    <TableRow
-                      key={doc.id}
-                      sx={{
-                        gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr 60px",
-                      }}
-                    >
+                    <DocumentsTableRow key={doc.id}>
                       <Typography
                         fontSize="0.875rem"
                         color="#ffffff"
@@ -445,17 +457,16 @@ const AdminPage = () => {
                       <span>{doc.chunkCount}</span>
                       <span>{formatBytes(doc.fileSizeBytes)}</span>
                       <Tooltip title="Delete document">
-                        <IconButton
+                        <DangerIconButton
                           size="small"
                           onClick={() =>
                             handleDeleteDocument(doc.id, doc.originalFileName)
                           }
-                          sx={{ color: "#F44336" }}
                         >
                           <Delete fontSize="small" />
-                        </IconButton>
+                        </DangerIconButton>
                       </Tooltip>
-                    </TableRow>
+                    </DocumentsTableRow>
                   ))}
                 </AdminTable>
               </AdminCard>
@@ -470,24 +481,15 @@ const AdminPage = () => {
                   </AdminCardTitle>
                 </AdminCardHeader>
                 <AdminTable>
-                  <TableHeader
-                    sx={{
-                      gridTemplateColumns: "2fr 2fr 1.5fr 1fr 1fr",
-                    }}
-                  >
+                  <ConversationsTableHeader>
                     <span>Question</span>
                     <span>Answer Preview</span>
                     <span>User</span>
                     <span>Sources</span>
                     <span>Date</span>
-                  </TableHeader>
+                  </ConversationsTableHeader>
                   {conversations.map((convo) => (
-                    <TableRow
-                      key={convo.id}
-                      sx={{
-                        gridTemplateColumns: "2fr 2fr 1.5fr 1fr 1fr",
-                      }}
-                    >
+                    <ConversationsTableRow key={convo.id}>
                       <Typography
                         fontSize="0.875rem"
                         color="#ffffff"
@@ -513,7 +515,7 @@ const AdminPage = () => {
                       <span>
                         {new Date(convo.createdAt).toLocaleDateString("en-IN")}
                       </span>
-                    </TableRow>
+                    </ConversationsTableRow>
                   ))}
                 </AdminTable>
               </AdminCard>

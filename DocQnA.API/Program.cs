@@ -44,6 +44,9 @@ builder.Services.AddSingleton<QdrantService>();
 builder.Services.AddHttpClient("NvidiaNim");
 builder.Services.AddScoped<NimService>();
 builder.Services.AddScoped<AdminService>();
+builder.Services.AddScoped<ShareService>();
+builder.Services.AddHttpClient("Webhook");
+builder.Services.AddScoped<WebhookService>();
 
 // ── FluentValidation ──────────────────────────────────────────
 builder.Services.AddFluentValidationAutoValidation();

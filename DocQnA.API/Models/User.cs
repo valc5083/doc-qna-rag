@@ -13,4 +13,6 @@ public class User
 
     // Navigation
     public ICollection<Document> Documents { get; set; } = new List<Document>();
+
+    public string? WebhookUrl { get; set; }
 }

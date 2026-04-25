@@ -12,6 +12,7 @@ public class IngestionService
     private readonly QdrantService _qdrantService;
     private readonly ILogger<IngestionService> _logger;
     private readonly ImageExtractorService _imageExtractor;
+    private readonly WebhookService _webhookService;
 
     public IngestionService(
         AppDbContext db,
@@ -20,7 +21,8 @@ public class IngestionService
         NimService nimService,
         QdrantService qdrantService,
         ILogger<IngestionService> logger,
-        ImageExtractorService imageExtractor
+        ImageExtractorService imageExtractor,
+        WebhookService webhookService
         )
     {
         _db = db;
@@ -30,6 +32,7 @@ public class IngestionService
         _qdrantService = qdrantService;
         _logger = logger;
         _imageExtractor = imageExtractor;
+        _webhookService = webhookService;
     }
 
     public async Task IngestFromFileAsync(Guid documentId, string filePath)
@@ -209,6 +212,23 @@ public class IngestionService
             // ── Step 7: Update document status ─────────────────
             document.ChunkCount = chunks.Count;
             document.Status = "ready";
+
+            // Get user's webhook URL
+            var user = await _db.Users.FindAsync(document.UserId);
+            if (user?.WebhookUrl != null)
+            {
+                await _webhookService.SendAsync(
+                    user.WebhookUrl,
+                    "document.ready",
+                    new
+                    {
+                        documentId = document.Id,
+                        fileName = document.OriginalFileName,
+                        chunkCount = document.ChunkCount,
+                        status = "ready"
+                    });
+            }
+
             await _db.SaveChangesAsync();
 
             _logger.LogInformation(

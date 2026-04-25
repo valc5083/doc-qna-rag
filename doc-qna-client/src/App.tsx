@@ -9,6 +9,7 @@ import HistoryPage from "./pages/HistoryPage";
 import CollectionsPage from "./pages/CollectionPage";
 import AdminPage from "./pages/AdminPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
+import SharedChatPage from "./pages/SharedChatPage";
 
 function App() {
   return (
@@ -75,6 +76,17 @@ function App() {
             <ProtectedRoute>
               <ErrorBoundary>
                 <AnalyticsPage />
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/share/:token"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                <SharedChatPage />
               </ErrorBoundary>
             </ProtectedRoute>
           }

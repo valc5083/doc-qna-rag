@@ -2,6 +2,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { CircularProgress, Link } from "@mui/material";
 import { PersonAddOutlined } from "@mui/icons-material";
+import { styled } from "@mui/material/styles";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
 import { authApi } from "../api/authApi";
 import { useAuthStore } from "../store/authStore";
@@ -22,10 +23,14 @@ import {
 import ConfirmationDialog from "../components/ConfirmationDialog";
 import usePageTitle from "../hooks/usePageTitle";
 
+const RegisterIcon = styled(PersonAddOutlined)({
+  color: "white",
+});
+
 const RegisterPage = () => {
   const navigate = useNavigate();
   const { login } = useAuthStore();
-  usePageTitle('Register');
+  usePageTitle("Register");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -69,7 +74,7 @@ const RegisterPage = () => {
         <CardInner>
           <HeaderSection>
             <IconAvatar>
-              <PersonAddOutlined sx={{ color: "white" }} />
+              <RegisterIcon />
             </IconAvatar>
             <PageTitle>Create Account</PageTitle>
             <SubTitle>Join DocQnA today</SubTitle>

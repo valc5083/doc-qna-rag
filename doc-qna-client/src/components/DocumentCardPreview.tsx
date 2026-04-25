@@ -1,29 +1,35 @@
-import { Box, Typography } from '@mui/material';
-import { PictureAsPdf } from '@mui/icons-material';
-import { styled } from '@mui/material/styles';
+import { Box, Typography } from "@mui/material";
+import { PictureAsPdf } from "@mui/icons-material";
+import { styled } from "@mui/material/styles";
 
 const PreviewBox = styled(Box)({
   width: 56,
   height: 72,
   borderRadius: 6,
-  background: 'linear-gradient(135deg, #FFEBEE, #FFCDD2)',
-  display: 'grid',
-  gridTemplateRows: '22px 12px 12px',
-  alignContent: 'center',
-  justifyItems: 'center',
+  background: "linear-gradient(135deg, #FFEBEE, #FFCDD2)",
+  display: "grid",
+  gridTemplateRows: "22px 12px 12px",
+  alignContent: "center",
+  justifyItems: "center",
   flexShrink: 0,
-  border: '1px solid #FFCDD2',
+  border: "1px solid #FFCDD2",
   rowGap: 2,
-  padding: '6px 4px',
+  padding: "6px 4px",
 });
 
 const PageCount = styled(Typography)({
-  fontSize: '0.6rem',
+  fontSize: "0.6rem",
   fontWeight: 700,
-  color: '#C62828',
+  color: "#C62828",
   lineHeight: 1,
-  textAlign: 'center',
-  width: '100%',
+  textAlign: "center",
+  width: "100%",
+});
+
+const PreviewPdfIcon = styled(PictureAsPdf)({
+  color: "#C62828",
+  fontSize: 22,
+  display: "block",
 });
 
 const formatSize = (bytes: number) => {
@@ -39,18 +45,19 @@ interface Props {
 }
 
 const DocumentCardPreview = ({
-  fileName, chunkCount, fileSizeBytes
+  fileName,
+  chunkCount,
+  fileSizeBytes,
 }: Props) => {
   // Estimate pages from chunks (rough: 1 chunk ≈ 0.5 pages)
-  const estimatedPages = Math.max(1,
-    Math.round(chunkCount * 0.5));
+  const estimatedPages = Math.max(1, Math.round(chunkCount * 0.5));
 
-  const ext = fileName.split('.').pop()?.toUpperCase() ?? 'PDF';
+  const ext = fileName.split(".").pop()?.toUpperCase() ?? "PDF";
   const formattedSize = formatSize(fileSizeBytes);
 
   return (
     <PreviewBox title={`${formattedSize} • ~${estimatedPages} pages`}>
-      <PictureAsPdf sx={{ color: '#C62828', fontSize: 22, display: 'block' }} />
+      <PreviewPdfIcon />
       <PageCount>{ext}</PageCount>
       <PageCount>~{estimatedPages}p</PageCount>
     </PreviewBox>
